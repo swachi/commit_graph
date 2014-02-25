@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>test graph</title>
+<style>
+  .link {
+    stroke: gray;
+    stroke-width: 1.5px;
+  }
+
+  .node {
+    fill: #66CC66;
+    stroke: #000;
+    stroke-width: 1px;
+  }
+
+  .node:hover {
+    fill: red;
+  }
+
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+  var width = 900;
+  var height = 700;
+
+  var svg = d3.select("body").append("svg")
+              .attr("width", width)
+              .attr("height", height);
+  
+
+  // constructs a new ordinal scale of range of ten categorical colors.
+  var fill = d3.scale.category10(); 
+
+  var graph = {nodes:[], links:[]}
+  var somedata = null
+
+  var link = null
+  var node = null
+
+var force = d3.layout.force()
+              .size([width, height])
+              .charge(-50)
+              .linkDistance(10)
+              .on("tick", tick)
+              .on("start", function(d) {})
+              .on("end", function(d) {})
+
+
+var force_layout = function() {
+     force.nodes(graph.nodes)
+          .links(graph.links)
+          .start();
+  }
+
+var sha2key = d3.map()
+
+function tick(d) {
+  graph_update(0);
+}
+
+
+
+////////////////////////////////////////////////////////////////
+d3.json("/data/commits.json", function(commit_data){
+    // console.log(JSON.stringify(commit_data))
+
+    
+    // create list of objects to serve as nodes
+    graph.nodes = d3.range(commit_data.length).map(function(i){
+      return commit_data[i]
+    })
+
+    // for debug - remove later
+    somedata = commit_data
+
+    // lookup table for sha --> node index
+    graph.nodes.forEach(function(cx, i){
+      sha2key.set(cx.sha,i)
+    })
+
+    // generate links
+    graph.nodes.forEach(function(target_node,i){
+
+      d3.map(target_node.parents).forEach(function(i,parent){
+        // grab source node
+        var source_node = graph.nodes[sha2key.get(parent.sha)]
+        // will show Cannot read property 'weight' of undefined
+        if (source_node) { 
+
+          // add a link
+          graph.links.push({"source":source_node, "target":target_node})
+        }
+      })
+    })
+
+    // generate svg elements for links
+    link = svg.selectAll(".link")
+                  .data(graph.links)
+                  .enter()
+                  .append("line")
+                  .attr("class","link")
+
+    // generate svg elements for nodes
+    node = svg.selectAll(".node")
+                  .data(graph.nodes)
+                  .enter()
+                  .append("g")
+                  .attr("class","node")
+
+    // append a graphical element for nodes
+    node.append("circle")
+        .attr("r", 5)
+
+  force_layout() // necessary.
+  // graph_update(500)
+});
+
+function graph_update(delay) {
+
+  link.transition().duration(delay)
+      .attr("x1", function(d) { return d.target.x; })
+      .attr("y1", function(d) { return d.target.y; })
+      .attr("x2", function(d) { return d.source.x; })
+      .attr("y2", function(d) { return d.source.y; });
+
+  node.transition().duration(delay)
+      .attr("transform", function(d) { 
+        return "translate("+d.x+","+d.y+")"; 
+      });
+}
+
+</script>
+</body>

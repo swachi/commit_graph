@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Homework 2 Graph</title>
+<style>
+  .link {
+    stroke: gray;
+    stroke-width: 1.5px;
+  }
+
+  .node {
+    fill: #66CC66;
+    stroke: #000;
+    stroke-width: 1px;
+  }
+
+  .node:hover {
+    fill: red;
+  }
+
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+var somedata = null;
+
+// set up svg viewport
+var width = 900,
+    height = 700;
+var svg = d3.select("body").append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+
+var fill = d3.scale.category10();
+
+var graph = {nodes:[], links:[]};
+
+var nb_nodes = 100, nb_cat = 10;
+
+
+var force = d3.layout.force()
+    .size([width, height])
+    .charge(-50)
+    .linkDistance(10)
+    .on("tick", tick)
+    .on("start", function(d) {})
+    .on("end", function(d) {})
+
+function tick(d) {
+
+  graph_update(0);
+}
+
+function random_layout() {
+  
+  force.stop();
+
+  graph.nodes.forEach(function(d, i) {
+    d.x = width/4 + 2*width*Math.random()/4;
+    d.y = height/4 + 2*height*Math.random()/4;
+  })
+  
+  graph_update(500);
+}
+function force_layout() {
+
+ force.nodes(graph.nodes)
+      .links(graph.links)
+      .start();
+}
+function line_cat_layout() {
+  // force.stop();
+  graph.nodes.forEach(function(d, i) {
+    d.y = height/2 + d.cat*20;
+  })
+  graph_update(500);
+}
+function category_color() {
+  d3.selectAll("circle").transition().duration(500).style("fill", function(d) { return fill(d.cat); });
+}
+function category_size() {
+  d3.selectAll("circle").transition().duration(500).attr("r", function(d) { return Math.sqrt((d.cat+1)*10); });
+}
+
+function graph_update(delay) {
+
+  link.transition().duration(delay)
+      .attr("x1", function(d) { return d.target.x; })
+      .attr("y1", function(d) { return d.target.y; })
+      .attr("x2", function(d) { return d.source.x; })
+      .attr("y2", function(d) { return d.source.y; });
+
+  node.transition().duration(delay)
+      .attr("transform", function(d) { 
+        return "translate("+d.x+","+d.y+")"; 
+      });
+}
+
+
+var link = svg.selectAll(".link")
+              .data(graph.links)
+            .enter().append("line")
+              .attr("class", "link")
+
+var node = svg.selectAll(".node")
+              .data(graph.nodes)
+            .enter()
+              .append("g").attr("class", "node");
+
+///////////////////////////////////////////////////////////////////////////
+console.log("loading")
+d3.json('http://localhost:8000/data/commits.json', function(commit_data){
+  console.log("loading done")
+  // console.log(JSON.stringify(commit_data))
+  somedata = commit_data
+
+  var commit_dict = {}
+  // somedata = commit_dict
+  // create sha dictionary for commit
+  for (var i=0; i < commit_data.length -1; i++){
+    commit_data[i]["idx"] = i;
+    commit_data[i]["cat"] = i;
+    commit_dict[commit_data[i].sha] = commit_data[i]
+  }
+
+  graph.nodes = d3.range(commit_data.length).map(function(d) {
+      // console.log(d)
+    return commit_data[i];
+  })
+
+  // define links
+  graph.nodes.map( function (d,i) {
+    var tgt_node = commit_data[i]
+    var parents = tgt_node.parents
+    for (var i=0; i < parents.length; i++){
+      var parent = commit_dict[parents[i].sha]
+      // console.log("looking up"+parents[i].sha)
+      // console.log("found"+parent)
+      if (parent){
+      graph.links.push({"source":parent.idx, 
+                        "target":tgt_node.idx })
+     }
+    }
+    
+  });
+
+  // somedata = graph
+  
+ link = svg.selectAll(".link")
+              .data(graph.links)
+            .enter().append("line")
+              .attr("class", "link")
+
+ node = svg.selectAll(".node")
+              .data(graph.nodes)
+            .enter()
+              .append("g").attr("class", "node");
+
+node.append("circle")
+    .attr("r", 5)
+
+  // line_cat_layout()
+  // force_layout()
+  random_layout()
+// [ {... , sha, parents:[sha]}]
+})
+
+
+</script>
+</body>
+</html>
