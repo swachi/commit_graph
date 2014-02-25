@@ -6,7 +6,11 @@
     stroke: gray;
     stroke-width: 1.5px;
   }
-
+path.link {
+  fill: none;
+  stroke: #666;
+  stroke-width: 1.5px;
+}
   .node {
     fill: #66CC66;
     stroke: #000;
@@ -22,7 +26,7 @@
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
 
-  var width = 900;
+  var width = 5000;
   var height = 700;
 
   var svg = d3.select("body").append("svg")
@@ -38,6 +42,12 @@
 
   var link = null
   var node = null
+  var path = null
+
+  var x_scale = d3.scale.linear().range([0,width]);
+
+
+var alldates = []
 
 var force = d3.layout.force()
               .size([width, height])
@@ -61,63 +71,255 @@ function tick(d) {
 }
 
 
+var myurls = [
+"/data/branch/commits.develop.json",
+"/data/branch/commits.develop_pickingmanager2.json",
+"/data/branch/commits.entourage.json",
+"/data/branch/commits.genlineup.json",
+"/data/branch/commits.master.json",
+"/data/branch/commits.scatterplot.json",
+"/data/branch/commits.stable_2.0.1.json",
+"/data/branch/commits.stable_2.0.2.json",
+"/data/branch/commits.stable_2.01.json",
+"/data/branch/commits.stable_2.1.json",
+"/data/branch/commits.stable_2.json",
+"/data/branch/commits.vislinks.json",
+"/data/branch/commits.vislinks2.json",
+"/data/branch/commits.webpage_unpublished.json",
+"/data/branch/commits.xdata.json",
+]
+
+// var myurls = ["/data/branch/commits.develop.json",
+// "/data/branch/commits.develop_pickingmanager2.json","/data/branch/commits.entourage.json"]
+
+
+var dataFetcher = function(urls, callbackfunc){
+  var answer = d3.map()
+
+  // fill with nulls
+  d3.map(urls).forEach(function(i, myurl){
+    answer.set(myurl, "undefined")
+  })
+
+  console.log(answer)
+
+  // determine if the datafetcher collected everything
+  var isAllCollected = function(someAnswer){
+    return someAnswer.values()
+                     .filter(function(x){return x === "undefined";}).length == 0
+  }
+
+  d3.map(urls).forEach(function(i, myurl){
+    // console.log(myurl);
+    d3.json(myurl, function(respData){
+      answer.set(myurl,respData)
+      console.log("got one!")
+      if (isAllCollected(answer)) {
+        console.log("finished!")
+        callbackfunc(answer);
+      }
+    });
+  });
+}
+
+
+function line_cat_layout() {
+
+  force.stop();
+
+  graph.nodes.forEach(function(d, i) {
+    d.y = height/2 + d.cat*20;
+
+    d.x = d.idx*5;
+  })
+
+  graph_update(500);
+}
+
+function line_cat_layout_idx() {
+
+  force.stop();
+
+  graph.nodes.forEach(function(d, i) {
+    d.y = height/2 + d.cat*20;
+
+    x_scale.domain([0,graph.nodes.length])
+
+    d.x = x_scale (d.idx);
+  })
+
+  graph_update(500);
+}
+
+function line_cat_layout_time() {
+
+  force.stop();
+
+  graph.nodes.forEach(function(d, i) {
+    d.y = height/2 + d.cat*20;
+
+     x_scale.domain([d3.min(alldates),d3.max(alldates)])
+
+    d.x = x_scale(d.date);
+  })
+
+  graph_update(500);
+}
+
+
+function category_size() {
+  d3.selectAll("circle").transition().duration(500).attr("r", function(d) { return Math.sqrt((d.cat+1)*10); });
+}
+
+function category_color() {
+  d3.selectAll("circle").transition().duration(500).style("fill", function(d) { return fill(d.cat); });
+}
+
+function getFieldList(someArray, fieldname){
+  return someArray.map(function(x){
+    return x[fieldname];
+  })
+}
 
 ////////////////////////////////////////////////////////////////
-d3.json("/data/commits.json", function(commit_data){
-    // console.log(JSON.stringify(commit_data))
+dataFetcher(myurls, function(datamap){
 
-    
-    // create list of objects to serve as nodes
-    graph.nodes = d3.range(commit_data.length).map(function(i){
-      return commit_data[i]
+
+  somedata = datamap
+  //console.log(datamap);
+  var branches = datamap.keys(); // classes are urls for branches
+
+
+  var branchToCat = function(branch){
+    return branches.indexOf(branch)
+  }
+
+
+  var getCommitDate = function(c){
+    return Date.parse(c.commit.committer.date)
+  }
+  // sort the nodes
+  var nodeCompare = function(a, b){
+    if (getCommitDate(a) > getCommitDate(b)) return -1
+    if (getCommitDate(a) < getCommitDate(b)) return 1
+    return 0
+  }
+
+
+  datamap.forEach(function(key, value){
+    // console.log(key)
+    // console.log(value)
+    var myCommits = value
+    var branchName = key
+
+    myCommits.sort(nodeCompare)
+
+    myCommits = myCommits.splice(myCommits.length/2,myCommits.length-myCommits.length/2)
+    d3.map(myCommits).forEach(function (i, myCommit){
+          myCommit.branchName = branchName
+          myCommit.cat = branchToCat(branchName)
+          myCommit.date = getCommitDate(myCommit)
+          alldates.push(myCommit.date) // todo: use set
+    graph.nodes.push(myCommit)
     })
+  })
 
-    // for debug - remove later
-    somedata = commit_data
+  graph.nodes.sort(nodeCompare);
+  d3.map(graph.nodes).forEach(function(key, value){
+    value.idx = key
+  })
 
-    // lookup table for sha --> node index
-    graph.nodes.forEach(function(cx, i){
-      sha2key.set(cx.sha,i)
+  // generate links
+  graph.nodes.forEach(function(target_node, i){
+
+    d3.map(target_node.parents).forEach(function(i, parentCommit){
+      // get source node
+
+      var source_node = graph.nodes.filter(function(commit_node){
+        return commit_node.sha == parentCommit.sha
+      })[0]
+
+      if (source_node) {
+        graph.links.push({"source":source_node, "target": target_node})
+      }
     })
+  })
 
-    // generate links
-    graph.nodes.forEach(function(target_node,i){
 
-      d3.map(target_node.parents).forEach(function(i,parent){
-        // grab source node
-        var source_node = graph.nodes[sha2key.get(parent.sha)]
-        // will show Cannot read property 'weight' of undefined
-        if (source_node) { 
-
-          // add a link
-          graph.links.push({"source":source_node, "target":target_node})
-        }
-      })
-    })
+svg.append("svg:defs").selectAll("marker")
+    .data(["end"])      // Different link/path types can be defined here
+  .enter().append("svg:marker")    // This section adds in the arrows
+    .attr("id", String)
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 15)
+    .attr("refY", -1.5)
+    .attr("markerWidth", 6)
+    .attr("markerHeight", 6)
+    .attr("orient", "auto")
+  .append("svg:path")
+    .attr("d", "M0,-5L10,0L0,5");
 
     // generate svg elements for links
+    // link = svg.selectAll(".link")
+    //               .data(graph.links)
+    //               .enter()
+    //               .append("line")
+    //               .attr("class","link")
+
     link = svg.selectAll(".link")
                   .data(graph.links)
                   .enter()
                   .append("line")
                   .attr("class","link")
+                  .attr("marker-end","url(#end)")
+
 
     // generate svg elements for nodes
-    node = svg.selectAll(".node")
+    node = svg.append("svg:g").selectAll(".node")
                   .data(graph.nodes)
                   .enter()
                   .append("g")
                   .attr("class","node")
+
+
+ path = svg.append("svg:g").selectAll("path")
+           .data(graph.links)
+           .enter().append("svg:path")
+           .attr("class", function(d) {
+            somedata = d
+            return "link " + d.type; })
+           .attr("class", "link")
+           .attr("marker-end", "url(#end)");
+
+
 
     // append a graphical element for nodes
     node.append("circle")
         .attr("r", 5)
 
   force_layout() // necessary.
-  // graph_update(500)
-});
+
+  // graph.nodes.forEach(function(target_node,i){
+  //   d3.map()
+
+  category_color()
+  // force_layout() 
+  // line_cat_layout()
+
+  // force_layout() 
+  // line_cat_layout()
+  line_cat_layout_time()
+  // line_cat_layout_idx()
+})
+
+
 
 function graph_update(delay) {
+  path.transition().duration(delay)
+      .attr("x1", function(d) { return d.target.x; })
+      .attr("y1", function(d) { return d.target.y; })
+      .attr("x2", function(d) { return d.source.x; })
+      .attr("y2", function(d) { return d.source.y; });
 
   link.transition().duration(delay)
       .attr("x1", function(d) { return d.target.x; })
