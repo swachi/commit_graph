@@ -87,7 +87,7 @@ var branches = [
 ]
 
 
-
+var somedata2 = null;
 //generates urls to explore
 var getUrlSet = function( project, branches ){
   // repos {project="", branches=[]}
@@ -246,21 +246,34 @@ var mainGraph = function(myurls){
         })[0]
 
         if (parent_node) {
-          graph.links.push({"target":parent_node, "source": child_node})
+          graph.links.push({"target":child_node, "source":  parent_node })
         }
 
       })
     })
 
 
+   
 
-    link = svg.selectAll(".link")
-                  .data(graph.links)
-                  .enter()
-                  .append("line")
-                  .attr("class","link")
-                  .attr("marker-end","url(#end)")
 
+    // link = svg.selectAll(".link")
+    //               .data(graph.links)
+    //               .enter()
+    //               .append("line")
+    //               .attr("class","link")
+    //               .attr("marker-end","url(#end)")
+
+    force_layout()
+    link = svg.selectAll("path")
+              .data(graph.links)
+              .enter().append("path")
+              .attr("d",lineData)
+              .attr("class", ".link")
+              .attr("stroke","black")
+              .attr("stroke-width", "1px")
+              .attr("shape-rendering", "auto")
+              .attr("fill", "none")
+              .attr("marker-end","url(#end)");
 
     // generate svg elements for nodes
     node = svg.append("svg:g").selectAll(".node")
@@ -296,7 +309,6 @@ var mainGraph = function(myurls){
     node.append("circle")
         .attr("r", 5)
 
-    force_layout()
   });
 }
 

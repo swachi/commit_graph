@@ -151,7 +151,35 @@ function getFieldList(someArray, fieldname){
 
 
 
+ var findNodeUsingSha = function(sha){
+      return graph.nodes.filter(function(commit_node){
+          return commit_node.sha == sha
+        })[0]
+    }
 
+var line = null
+
+// todo: choose between two
+line = d3.svg.line().x(function(point){return point.lx;})
+                            .y(function(point){return point.ly;})
+                            .interpolate("step-before");
+
+// line = d3.svg.line().x(function(point){return point.lx;})
+//                             .y(function(point){return point.ly;})
+//                             .interpolate("linear")
+
+    // LOTS of credits to Brian Feeny for figuring out this mess.
+    var lineData = function(d){
+      
+      // somedata2 = d
+      var points = [
+        {lx: (findNodeUsingSha(d.source.sha)).x, ly: (findNodeUsingSha(d.source.sha)).y},
+        {lx: (findNodeUsingSha(d.target.sha)).x, ly: (findNodeUsingSha(d.target.sha)).y}
+      ];
+      // console.log("d "+ line(points))
+      return line(points);
+
+    }
 
 
 function graph_update(delay) {
@@ -161,7 +189,7 @@ function graph_update(delay) {
       .attr("x2", function(d) { return d.source.x; })
       .attr("y2", function(d) { return d.source.y; });
 
-  link.transition().duration(delay)
+  link.transition().duration(delay).attr("d",lineData)
       .attr("x1", function(d) { return d.target.x; })
       .attr("y1", function(d) { return d.target.y; })
       .attr("x2", function(d) { return d.source.x; })
