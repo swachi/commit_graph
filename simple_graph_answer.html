@@ -24,247 +24,139 @@ path.link {
 </style>
 <body>
 <script src="http://d3js.org/d3.v3.min.js"></script>
+
+<form>
+  Layout:
+    <label><input type="radio" name="layout" value="force" checked> Force</label>
+    <label><input type="radio" name="layout" value="random" > Random</label>
+    <label><input type="radio" name="layout" value="radial"> Radial</label>  
+    <label><input type="radio" name="layout" value="line"> Line</label>
+    <label><input type="radio" name="layout" value="line_cat"> Line by Category</label>
+  </form>
+
+  <form>
+  X-axis:
+  <label><input type="radio" name="xaxis" value="line_idx"> index</label>
+  <label><input type="radio" name="xaxis" value="line_time"> time</label>
+  </form>
+  <form>
+  Color:
+    <label><input type="radio" name="color" value="nocolor" checked> None</label>
+    <label><input type="radio" name="color" value="color_branch" > Branch</label>
+    <label><input type="radio" name="color" value="color_auth" > Author</label>
+
+  </form>
+  <form>
+  Size:
+    <label><input type="radio" name="size" value="nosize" checked> None</label>
+    <label><input type="radio" name="size" value="size_cat" > Category</label>
+  </form>
+
+
+<script src="/js/d3setup.js"></script>
 <script>
 
-  var width = 5000;
-  var height = 700;
+var project = "caleydo/caleydo"
+// var project = "mbostock/d3"
 
-  var svg = d3.select("body").append("svg")
-              .attr("width", width)
-              .attr("height", height);
-  
+var baseURL = "https://api.github.com/repos/"+project //caleydo/caleydo"
 
-  // constructs a new ordinal scale of range of ten categorical colors.
-  var fill = d3.scale.category10(); 
+/// REMEMBER TO BLANK THIS BEFORE SUBMISSION! //////////////////////////////////////////////////////
+var token = "access_token=de2be790b564a799155c96e311884854e4e65be9"
 
-  var graph = {nodes:[], links:[]}
-  var somedata = null
+// forms url for retrieving branch commits
+var getBranchUrl = function(baseUrl, branchName){
+  // e.g., https://api.github.com/repos/mbostock/d3/commits?per_page=100&sha=adopt
+  return baseUrl+"/commits?"+token+"&per_page=50&sha="+branchName
+}
 
-  var link = null
-  var node = null
-  var path = null
+var getListBranchUrl = function(baseUrl){
+  return baseUrl+"/branches?"+token
+}
 
-  var x_scale = d3.scale.linear().range([0,width]);
-
-
-var alldates = []
-
-var force = d3.layout.force()
-              .size([width, height])
-              .charge(-50)
-              .linkDistance(10)
-              .on("tick", tick)
-              .on("start", function(d) {})
-              .on("end", function(d) {})
-
-
-var force_layout = function() {
-     force.nodes(graph.nodes)
-          .links(graph.links)
-          .start();
-  }
-
-var sha2key = d3.map()
-
-function tick(d) {
-  graph_update(0);
+var getRecentCommitUrl = function(baseUrl){
+  return baseUrl+"/commits?"+token+"&per_page=100"
 }
 
 
-var myurls = [
-"/data/branch/commits.develop.json",
-"/data/branch/commits.develop_pickingmanager2.json",
-"/data/branch/commits.entourage.json",
-"/data/branch/commits.genlineup.json",
-"/data/branch/commits.master.json",
-"/data/branch/commits.scatterplot.json",
-"/data/branch/commits.stable_2.0.1.json",
-"/data/branch/commits.stable_2.0.2.json",
-"/data/branch/commits.stable_2.01.json",
-"/data/branch/commits.stable_2.1.json",
-"/data/branch/commits.stable_2.json",
-"/data/branch/commits.vislinks.json",
-"/data/branch/commits.vislinks2.json",
-"/data/branch/commits.webpage_unpublished.json",
-"/data/branch/commits.xdata.json",
+// branches to explore in caleydo (ones with at least two branches interacting)
+var branches = [
+// "entourage",
+"develop_genlineup",
+"scatterplot",
+// "xdata"
 ]
 
-// var myurls = ["/data/branch/commits.develop.json",
-// "/data/branch/commits.develop_pickingmanager2.json","/data/branch/commits.entourage.json"]
+
+//generate urls to explore
+var myurls = []
+d3.map(branches).forEach(function(k,branch){
+  myurls.push(getBranchUrl(baseURL,branch));
+});
 
 
-var dataFetcher = function(urls, callbackfunc){
-  var answer = d3.map()
-
-  // fill with nulls
-  d3.map(urls).forEach(function(i, myurl){
-    answer.set(myurl, "undefined")
-  })
-
-  console.log(answer)
-
-  // determine if the datafetcher collected everything
-  var isAllCollected = function(someAnswer){
-    return someAnswer.values()
-                     .filter(function(x){return x === "undefined";}).length == 0
-  }
-
-  d3.map(urls).forEach(function(i, myurl){
-    // console.log(myurl);
-    d3.json(myurl, function(respData){
-      answer.set(myurl,respData)
-      console.log("got one!")
-      if (isAllCollected(answer)) {
-        console.log("finished!")
-        callbackfunc(answer);
-      }
-    });
-  });
-}
-
-
-function line_cat_layout() {
-
-  force.stop();
-
-  graph.nodes.forEach(function(d, i) {
-    d.y = height/2 + d.cat*20;
-
-    d.x = d.idx*5;
-  })
-
-  graph_update(500);
-}
-
-function line_cat_layout_idx() {
-
-  force.stop();
-
-  graph.nodes.forEach(function(d, i) {
-    d.y = height/2 + d.cat*20;
-
-    x_scale.domain([0,graph.nodes.length])
-
-    d.x = x_scale (d.idx);
-  })
-
-  graph_update(500);
-}
-
-function line_cat_layout_time() {
-
-  force.stop();
-
-  graph.nodes.forEach(function(d, i) {
-    d.y = height/2 + d.cat*20;
-
-     x_scale.domain([d3.min(alldates),d3.max(alldates)])
-
-    d.x = x_scale(d.date);
-  })
-
-  graph_update(500);
-}
-
-
-function category_size() {
-  d3.selectAll("circle").transition().duration(500).attr("r", function(d) { return Math.sqrt((d.cat+1)*10); });
-}
-
-function category_color() {
-  d3.selectAll("circle").transition().duration(500).style("fill", function(d) { return fill(d.cat); });
-}
-
-function getFieldList(someArray, fieldname){
-  return someArray.map(function(x){
-    return x[fieldname];
-  })
-}
 
 ////////////////////////////////////////////////////////////////
-dataFetcher(myurls, function(datamap){
+
+  dataFetcher(myurls, function(datamap){
+    var branches = datamap.keys(); // classes are urls for branches
+
+    var branchToCategories = function(branch){
+      return branches.indexOf(branch)
+    }
 
 
-  somedata = datamap
-  //console.log(datamap);
-  var branches = datamap.keys(); // classes are urls for branches
+    var getCommitDate = function(c){
+      return Date.parse(c.commit.committer.date)
+    }
+    // sort the nodes
+    var nodeCompare = function(a, b){
+      if (getCommitDate(a) > getCommitDate(b)) return 1
+      if (getCommitDate(a) < getCommitDate(b)) return -1
+      return 0
+    }
 
+    datamap.forEach(function(key, value){
+      var myCommits = value
+      var branchName = key
 
-  var branchToCat = function(branch){
-    return branches.indexOf(branch)
-  }
+      myCommits.sort(nodeCompare)
 
-
-  var getCommitDate = function(c){
-    return Date.parse(c.commit.committer.date)
-  }
-  // sort the nodes
-  var nodeCompare = function(a, b){
-    if (getCommitDate(a) > getCommitDate(b)) return -1
-    if (getCommitDate(a) < getCommitDate(b)) return 1
-    return 0
-  }
-
-
-  datamap.forEach(function(key, value){
-    // console.log(key)
-    // console.log(value)
-    var myCommits = value
-    var branchName = key
-
-    myCommits.sort(nodeCompare)
-
-    myCommits = myCommits.splice(myCommits.length/2,myCommits.length-myCommits.length/2)
-    d3.map(myCommits).forEach(function (i, myCommit){
-          myCommit.branchName = branchName
-          myCommit.cat = branchToCat(branchName)
-          myCommit.date = getCommitDate(myCommit)
-          alldates.push(myCommit.date) // todo: use set
-    graph.nodes.push(myCommit)
+      d3.map(myCommits).forEach(function (i, myCommit){
+            myCommit.branchName = branchName
+            myCommit.cat = branchToCategories(branchName)
+            myCommit.date = getCommitDate(myCommit)
+            myCommit.dateString = myCommit.commit.committer.date
+            myCommit.user = myCommit.author.id
+            alldates.push(myCommit.date) // todo: use set
+      graph.nodes.push(myCommit)
+      })
     })
-  })
 
-  graph.nodes.sort(nodeCompare);
-  d3.map(graph.nodes).forEach(function(key, value){
-    value.idx = key
-  })
-
-  // generate links
-  graph.nodes.forEach(function(target_node, i){
-
-    d3.map(target_node.parents).forEach(function(i, parentCommit){
-      // get source node
-
-      var source_node = graph.nodes.filter(function(commit_node){
-        return commit_node.sha == parentCommit.sha
-      })[0]
-
-      if (source_node) {
-        graph.links.push({"source":source_node, "target": target_node})
-      }
+    // generate index number in chronological order
+    graph.nodes.sort(nodeCompare);
+    d3.map(graph.nodes).forEach(function(key, node){
+      node.idx = key
     })
-  })
+
+    // generate links
+    graph.nodes.forEach(function(child_node, i){
+
+      d3.map(child_node.parents).forEach(function(i, parentCommit){
+        // get source node
+
+        var parent_node = graph.nodes.filter(function(commit_node){
+          return commit_node.sha == parentCommit.sha
+        })[0]
+
+        if (parent_node) {
+          graph.links.push({"target":parent_node, "source": child_node})
+        }
+
+      })
+    })
 
 
-svg.append("svg:defs").selectAll("marker")
-    .data(["end"])      // Different link/path types can be defined here
-  .enter().append("svg:marker")    // This section adds in the arrows
-    .attr("id", String)
-    .attr("viewBox", "0 -5 10 10")
-    .attr("refX", 15)
-    .attr("refY", -1.5)
-    .attr("markerWidth", 6)
-    .attr("markerHeight", 6)
-    .attr("orient", "auto")
-  .append("svg:path")
-    .attr("d", "M0,-5L10,0L0,5");
-
-    // generate svg elements for links
-    // link = svg.selectAll(".link")
-    //               .data(graph.links)
-    //               .enter()
-    //               .append("line")
-    //               .attr("class","link")
 
     link = svg.selectAll(".link")
                   .data(graph.links)
@@ -280,58 +172,167 @@ svg.append("svg:defs").selectAll("marker")
                   .enter()
                   .append("g")
                   .attr("class","node")
+                  .on("mouseover",function(d){
+                    console.log("d"+JSON.stringify(d.dateString))
+                    d3.select(this).data([d.branchName])
+                    .enter().append("text")
+                    .attr("test-anchor", "middle").attr("dy", "3em")
+                    .text(d.branchName)
+
+                  })
+                  .on("mouseout", function(d){
+                    // console.log("d"+JSON.stringify(d.branchName))
+                  });
 
 
- path = svg.append("svg:g").selectAll("path")
-           .data(graph.links)
-           .enter().append("svg:path")
-           .attr("class", function(d) {
-            somedata = d
-            return "link " + d.type; })
-           .attr("class", "link")
-           .attr("marker-end", "url(#end)");
+    path = svg.append("svg:g").selectAll("path")
+              .data(graph.links)
+              .enter().append("svg:path")
+              .attr("class", function(d) {
+               somedata = d
+               return "link " + d.type; })
+              .attr("class", "link")
+              .attr("marker-end", "url(#end)");
 
 
 
-    // append a graphical element for nodes
+      // append a graphical element for nodes
     node.append("circle")
         .attr("r", 5)
 
-  force_layout() // necessary.
+    
+    category_color()
 
-  // graph.nodes.forEach(function(target_node,i){
-  //   d3.map()
+    line_cat_layout_idx()
+  });
 
-  category_color()
-  // force_layout() 
-  // line_cat_layout()
 
-  // force_layout() 
-  // line_cat_layout()
-  line_cat_layout_time()
-  // line_cat_layout_idx()
+////////////////////////////////////////////////////////////////////////////
+
+// Generate the force layout
+var force = d3.layout.force()
+    .size([width, height])
+    .charge(-50)
+    .linkDistance(10)
+    .on("tick", tick)
+    .on("start", function(d) {})
+    .on("end", function(d) {})
+
+function tick(d) {
+
+  graph_update(0);
+}
+
+function random_layout() {
+  
+  force.stop();
+
+  graph.nodes.forEach(function(d, i) {
+    d.x = width/4 + 2*width*Math.random()/4;
+    d.y = height/4 + 2*height*Math.random()/4;
+  })
+  
+  graph_update(500);
+}
+
+function force_layout() {
+
+ force.nodes(graph.nodes)
+      .links(graph.links)
+      .start();
+}
+
+function line_layout() {
+
+  force.stop();
+
+  graph.nodes.forEach(function(d, i) {
+    d.y = height/2;
+  })
+
+  graph_update(500);
+}
+
+function line_cat_layout() {
+
+  force.stop();
+
+  graph.nodes.forEach(function(d, i) {
+    d.y = height/2 + d.cat*20;
+  })
+
+  graph_update(500);
+}
+
+function radial_layout() {
+
+  force.stop();
+
+  var r = height/2;
+
+  var arc = d3.svg.arc()
+          .outerRadius(r);
+
+  var pie = d3.layout.pie()
+  .sort(function(a, b) { return a.cat - b.cat;})
+          .value(function(d, i) { return 1; }); // equal share for each point
+
+  graph.nodes = pie(graph.nodes).map(function(d, i) {
+    d.innerRadius = 0;
+    d.outerRadius = r;
+    d.data.x = arc.centroid(d)[0]+height/2;
+    d.data.y = arc.centroid(d)[1]+width/2;
+    d.data.endAngle = d.endAngle; 
+    d.data.startAngle = d.startAngle; 
+    return d.data;
+  })
+
+  graph_update(500);
+}
+
+function category_color() {
+  d3.selectAll("circle").transition().duration(500).style("fill", function(d) { return fill(d.cat); });
+}
+
+function category_size() {
+  d3.selectAll("circle").transition().duration(500).attr("r", function(d) { return Math.sqrt((d.cat+1)*10); });
+}
+
+d3.select("input[value=\"force\"]").on("click", force_layout);
+d3.select("input[value=\"random\"]").on("click", random_layout);
+d3.select("input[value=\"line\"]").on("click", line_layout);
+d3.select("input[value=\"line_cat\"]").on("click", line_cat_layout);
+d3.select("input[value=\"radial\"]").on("click", radial_layout);
+
+d3.select("input[value=\"nocolor\"]").on("click", function() {
+  d3.selectAll("circle").transition().duration(500).style("fill", "#66CC66");
 })
 
+d3.select("input[value=\"color_cat\"]").on("click", category_color);
+
+d3.select("input[value=\"nosize\"]").on("click", function() {
+  d3.selectAll("circle").transition().duration(500).attr("r", 5);
+})
+
+d3.select("input[value=\"size_cat\"]").on("click", category_size);
 
 
-function graph_update(delay) {
-  path.transition().duration(delay)
-      .attr("x1", function(d) { return d.target.x; })
-      .attr("y1", function(d) { return d.target.y; })
-      .attr("x2", function(d) { return d.source.x; })
-      .attr("y2", function(d) { return d.source.y; });
 
-  link.transition().duration(delay)
-      .attr("x1", function(d) { return d.target.x; })
-      .attr("y1", function(d) { return d.target.y; })
-      .attr("x2", function(d) { return d.source.x; })
-      .attr("y2", function(d) { return d.source.y; });
+d3.select("input[value=\"line_idx\"]").on("click", line_cat_layout_idx);
+d3.select("input[value=\"line_time\"]").on("click", line_cat_layout_time);
 
-  node.transition().duration(delay)
-      .attr("transform", function(d) { 
-        return "translate("+d.x+","+d.y+")"; 
-      });
-}
+
+
+d3.select("input[value=\"color_branch\"]").on("click", category_color);
+d3.select("input[value=\"color_auth\"]").on("click", author_color);
+category_color
+
+author_color
+
+
+
+
+
 
 </script>
 </body>
