@@ -26,47 +26,48 @@ path.link {
 <script src="http://d3js.org/d3.v3.min.js"></script>
 
 <form>
-  Layout:
-    <label><input type="radio" name="layout" value="force" checked> Force</label>
-    <label><input type="radio" name="layout" value="random" > Random</label>
-    <label><input type="radio" name="layout" value="radial"> Radial</label>  
-    <label><input type="radio" name="layout" value="line"> Line</label>
-    <label><input type="radio" name="layout" value="line_cat"> Line by Category</label>
-  </form>
+Layout:
+  <label><input type="radio" name="layout" value="force" checked> Force</label>
+  <label><input type="radio" name="layout" value="random" > Random</label>
+  <label><input type="radio" name="layout" value="radial"> Radial</label>  
+  <label><input type="radio" name="layout" value="line"> Line</label>
+  <label><input type="radio" name="layout" value="line_cat"> Line by Category</label>
+  <label><input type="radio" name="layout" value="line_idx"> index</label>
+  <label><input type="radio" name="layout" value="line_time"> time</label>
+</form>
+<form>
+Color:
+  <label><input type="radio" name="color" value="nocolor" checked> None</label>
+  <label><input type="radio" name="color" value="color_branch" > Branch</label>
+  <label><input type="radio" name="color" value="color_auth" > Author</label>
+</form>
+<form>
+Size:
+  <label><input type="radio" name="size" value="nosize" checked> None</label>
+  <label><input type="radio" name="size" value="size_cat" > Category</label>
+</form>
+<form>
+Repositories:
+  <label><input type="radio" name="repo" value="caleydo" checked> Caleydo</label>
+  <label><input type="radio" name="repo" value="caleydo" checked> Caleydo</label>
 
-  <form>
-  X-axis:
-  <label><input type="radio" name="xaxis" value="line_idx"> index</label>
-  <label><input type="radio" name="xaxis" value="line_time"> time</label>
-  </form>
-  <form>
-  Color:
-    <label><input type="radio" name="color" value="nocolor" checked> None</label>
-    <label><input type="radio" name="color" value="color_branch" > Branch</label>
-    <label><input type="radio" name="color" value="color_auth" > Author</label>
+<script src="/js2/d3setup.js"></script>
 
-  </form>
-  <form>
-  Size:
-    <label><input type="radio" name="size" value="nosize" checked> None</label>
-    <label><input type="radio" name="size" value="size_cat" > Category</label>
-  </form>
-
-
-<script src="/js/d3setup.js"></script>
 <script>
 
-var project = "caleydo/caleydo"
+//////////////////////////////////////////////////////////////////////////////
+// Personal Token (only for grading purpose - NOT secure practice to hardcode)
+var token = "access_token=de2be790b564a799155c96e311884854e4e65be9"
+//////////////////////////////////////////////////////////////////////////////
+
+
 // var project = "mbostock/d3"
 
-var baseURL = "https://api.github.com/repos/"+project //caleydo/caleydo"
-
-/// REMEMBER TO BLANK THIS BEFORE SUBMISSION! //////////////////////////////////////////////////////
-var token = "access_token=de2be790b564a799155c96e311884854e4e65be9"
-
+var baseUrl = function(project){
+  return "https://api.github.com/repos/"+project
+}
 // forms url for retrieving branch commits
 var getBranchUrl = function(baseUrl, branchName){
-  // e.g., https://api.github.com/repos/mbostock/d3/commits?per_page=100&sha=adopt
   return baseUrl+"/commits?"+token+"&per_page=50&sha="+branchName
 }
 
@@ -78,26 +79,121 @@ var getRecentCommitUrl = function(baseUrl){
   return baseUrl+"/commits?"+token+"&per_page=100"
 }
 
-
+var project = "caleydo/caleydo"
 // branches to explore in caleydo (ones with at least two branches interacting)
 var branches = [
-// "entourage",
 "develop_genlineup",
 "scatterplot",
-// "xdata"
 ]
 
 
-//generate urls to explore
-var myurls = []
-d3.map(branches).forEach(function(k,branch){
-  myurls.push(getBranchUrl(baseURL,branch));
-});
+
+//generates urls to explore
+var getUrlSet = function( project, branches ){
+  // repos {project="", branches=[]}
+  if (branches.length == 0) {
+    // get *all* the branches?
 
 
+    return [ getRecentCommitUrl(baseUrl(project))]
+
+
+
+  } else {
+    var myurls = []
+    d3.map(branches).forEach(function(k,branch){
+     myurls.push(getBranchUrl(baseUrl(project),branch));
+    });
+    return myurls
+  }
+}
+
+var getUrlSetFromDict = function (reposDict){
+  return getUrlSet(reposDict.project, reposDict.branches)
+}
+
+
+// I could automatically list all the branches if needed, BUT if it is to be 
+// selected, we need to manually list them.
+repos = {
+  repo_neovim:{
+    project:"neovim/neovim",
+    branches:[
+      "gh-pages",
+"libuv-io",
+"libuv-io-saved",
+"master",
+"top-level-loop",
+    ]
+  },
+  repo_d3: {
+    project:"mbostock/d3", 
+    branches:[
+      "adopt",
+      "axis-scale",
+      "bower-metadata",
+      "clip-polygon",
+      "clip-polygon-semantics",
+      "environment",
+      "fix-antimeridian",
+      "fix-ie9-string-coercion",
+      "fix-resampling-error",
+      "geo-path-length",
+      "get-or-remove-tween",
+      "gh-pages",
+      "line-copy",
+      "master",
+      "time-bst",
+      "zoom-translate-extent",]},
+repo_shiny: {
+    project:"rstudio/shiny", 
+    branches:[
+      "bugfix/ie8-compatibility",
+      "feature/alerts",
+      "feature/bootstrap-layout",
+      "feature/debug-hooks",
+      "feature/example-display-mode",
+      "feature/navbar-input-binding",
+      "feature/shiny.browser",
+      "gh-pages",
+      "httpuv",
+      "master",
+      "reactlog",]},
+
+  repo_jquery: {
+    project:"jquery/jquery", 
+    branches:[
+      "1.8-stable",
+      "1.9-stable",
+      "1.x-master",
+      "bug_14683",
+      "commitplease",
+      "delegation",
+      "master",]},
+  repo_bootstrap: {
+    project:"twbs/bootstrap", 
+    branches:[
+      "customizer-compat",
+      "docs_zeroclipboard",
+      "document_popover_focus",
+      "fancy-sauce-err-reporting",
+      "fix-8869",
+      "gh-pages",
+      "jscs",
+      "master",
+      "mo-classes-less-problems",
+      "rtl_via_css_flip",
+      "sauce-screenshots",
+      "sr-only-focusable",]}
+}
+
+
+// // 
+// https://api.github.com/repos/rstudio/shiny/branches?access_token=de2be790b564a799155c96e311884854e4e65be9&per_page=100
 
 ////////////////////////////////////////////////////////////////
-
+// Loads data and graphs them.
+var mainGraph = function(myurls){
   dataFetcher(myurls, function(datamap){
     var branches = datamap.keys(); // classes are urls for branches
 
@@ -200,14 +296,35 @@ d3.map(branches).forEach(function(k,branch){
     node.append("circle")
         .attr("r", 5)
 
-    
-    category_color()
-
-    line_cat_layout_idx()
+    force_layout()
   });
-
+}
 
 ////////////////////////////////////////////////////////////////////////////
+
+
+// var myurls = getUrlSet(project, branches)
+// mainGraph(myurls)
+
+
+// var repos = repos.repo_caleydo
+// var repos = repos.repo_bootstrap
+// var repos = 
+
+
+// mainGraph(getUrlSetFromDict(repos.repo_caleydo))
+// mainGraph(getUrlSetFromDict(repos.repo_d3))
+// mainGraph(getUrlSetFromDict(repos.repo_bootstrap))
+// mainGraph(getUrlSetFromDict(repos.repo_jquery))
+// mainGraph(getUrlSetFromDict(repos.repo_neovim))
+mainGraph(getUrlSetFromDict(repos.repo_shiny))
+
+// mainGraph(getUrlSetFromDict(repos.repo_caleydo))
+
+
+
+////////////////////////////////////////////////////////////
+// layouts
 
 // Generate the force layout
 var force = d3.layout.force()
@@ -280,8 +397,8 @@ function radial_layout() {
   graph.nodes = pie(graph.nodes).map(function(d, i) {
     d.innerRadius = 0;
     d.outerRadius = r;
-    d.data.x = arc.centroid(d)[0]+height/2;
-    d.data.y = arc.centroid(d)[1]+width/2;
+    d.data.y = arc.centroid(d)[0]+height/2;
+    d.data.x = arc.centroid(d)[1]+width/2;
     d.data.endAngle = d.endAngle; 
     d.data.startAngle = d.startAngle; 
     return d.data;
@@ -289,6 +406,7 @@ function radial_layout() {
 
   graph_update(500);
 }
+////////////////////////////////////////////////////////////
 
 function category_color() {
   d3.selectAll("circle").transition().duration(500).style("fill", function(d) { return fill(d.cat); });
@@ -298,41 +416,30 @@ function category_size() {
   d3.selectAll("circle").transition().duration(500).attr("r", function(d) { return Math.sqrt((d.cat+1)*10); });
 }
 
+////////////////////////////////////////////////////////////////////////////////////
+// Radio button callbacks
+// layouts
 d3.select("input[value=\"force\"]").on("click", force_layout);
 d3.select("input[value=\"random\"]").on("click", random_layout);
 d3.select("input[value=\"line\"]").on("click", line_layout);
 d3.select("input[value=\"line_cat\"]").on("click", line_cat_layout);
 d3.select("input[value=\"radial\"]").on("click", radial_layout);
-
-d3.select("input[value=\"nocolor\"]").on("click", function() {
-  d3.selectAll("circle").transition().duration(500).style("fill", "#66CC66");
-})
-
-d3.select("input[value=\"color_cat\"]").on("click", category_color);
-
-d3.select("input[value=\"nosize\"]").on("click", function() {
-  d3.selectAll("circle").transition().duration(500).attr("r", 5);
-})
-
-d3.select("input[value=\"size_cat\"]").on("click", category_size);
-
-
-
 d3.select("input[value=\"line_idx\"]").on("click", line_cat_layout_idx);
 d3.select("input[value=\"line_time\"]").on("click", line_cat_layout_time);
 
-
-
+// colors
+d3.select("input[value=\"nocolor\"]").on("click", function() {
+  d3.selectAll("circle").transition().duration(500).style("fill", "#66CC66");
+})
 d3.select("input[value=\"color_branch\"]").on("click", category_color);
 d3.select("input[value=\"color_auth\"]").on("click", author_color);
-category_color
 
-author_color
-
-
-
-
-
+// sizes
+d3.select("input[value=\"nosize\"]").on("click", function() {
+  d3.selectAll("circle").transition().duration(500).attr("r", 5);
+})
+d3.select("input[value=\"size_cat\"]").on("click", category_size);
+////////////////////////////////////////////////////////////////////////////////////
 
 </script>
 </body>
