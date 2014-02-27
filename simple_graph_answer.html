@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
-<title>test graph</title>
+<title>simple_graph_answer</title>
 <style>
   .link {
     stroke: gray;
@@ -192,17 +192,6 @@ function radial_layout() {
   });
   graph_update(500);
 };
-
-
-// // 
-// function line_cat_layout() {
-//   setLineInterpolation("step-before");
-//   force.stop();
-//   graph.nodes.forEach(function(d, i) {
-//     d.y = height/2 + d.cat*20;
-//   })
-//   graph_update(500);
-// };
 
 function line_cat_layout_idx() {
   setLineInterpolation("step-before");
