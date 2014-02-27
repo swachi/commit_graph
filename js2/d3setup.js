@@ -1,3 +1,5 @@
+
+
   var padding = 20;
   var width = 1200;
   var height = 500;
@@ -31,6 +33,7 @@ svg.append("svg:defs").selectAll("marker")
   var link = null
   var node = null
   var path = null
+  // var yaxis = null
 
   var x_scale = d3.scale.linear().range([0+padding,width-padding]);
 
@@ -210,8 +213,6 @@ function graph_update(delay) {
       });
 }
 ///////////////////////////////////////////////////////////
-
-
 
 
 

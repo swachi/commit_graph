@@ -26,57 +26,52 @@ path.link {
 <script src="http://d3js.org/d3.v3.min.js"></script>
 
 <form>
-  Layout:
-    <label><input type="radio" name="layout" value="force" checked> Force</label>
-    <label><input type="radio" name="layout" value="random" > Random</label>
-    <label><input type="radio" name="layout" value="radial"> Radial</label>  
-    <label><input type="radio" name="layout" value="line"> Line</label>
-    <label><input type="radio" name="layout" value="line_cat"> Line by Category</label>
-    
-  </form>
+Layout:
+  <label><input type="radio" name="layout" value="force" checked> Force</label>
+  <label><input type="radio" name="layout" value="random" > Random</label>
+  <label><input type="radio" name="layout" value="radial"> Radial</label>  
+  <label><input type="radio" name="layout" value="line"> Line</label>
+  <label><input type="radio" name="layout" value="line_idx"> index</label>
+  <label><input type="radio" name="layout" value="line_time"> time</label>
+</form>
+<form>
+Color:
+  <label><input type="radio" name="color" value="nocolor" checked> None</label>
+  <label><input type="radio" name="color" value="color_branch" > Branch</label>
+  <label><input type="radio" name="color" value="color_auth" > Author</label>
+</form>
+<form>
+Size:
+  <label><input type="radio" name="size" value="nosize" checked> None</label>
+  <label><input type="radio" name="size" value="size_cat" > Category</label>
+</form>
+<form>
+Repositories:
+  <label><input type="radio" name="repo" value="repo_shiny" checked> shiny</label>
+  <label><input type="radio" name="repo" value="repo_neovim" > neovim</label>
+  <label><input type="radio" name="repo" value="repo_bootstrap" > bootstrap</label>
+  <label><input type="radio" name="repo" value="repo_jquery" > jquery</label>
+  <label><input type="radio" name="repo" value="repo_d3" > d3</label>
+</form>
 
-  <form>
-  X-axis:
-  <label><input type="radio" name="xaxis" value="line_idx"> x-Axis by index</label>
-  <label><input type="radio" name="xaxis" value="line_time"> x-Axis by time</label>
-  </form>
-  <form>
-  Color:
-    <label><input type="radio" name="color" value="nocolor" checked> None</label>
-    <label><input type="radio" name="color" value="color_cat" > Category</label>
-  </form>
-  <form>
-  Size:
-    <label><input type="radio" name="size" value="nosize" checked> None</label>
-    <label><input type="radio" name="size" value="size_cat" > Category</label>
-  </form>
 
+<script src="/js2/d3setup.js"></script>
 
-<script src="/js/d3setup.js"></script>
 <script>
 
-
-// https://api.github.com/repos/caleydo/caleydo/commits?per_page=100
-// var baseURL = "https://api.github.com/repos/caleydo/caleydo"// /commits?per_page=100"
-// // https://api.github.com/repos/mbostock/d3/commits?per_page=100&sha=adopt
-
-// // to get all the branches
-// var branchcall = "https://api.github.com/repos/caleydo/caleydo/branches"
-//https://api.github.com/repos/mbostock/d3/commits?access_token=de2be790b564a799155c96e311884854e4e65be9
+//////////////////////////////////////////////////////////////////////////////
+// Personal Token (only for grading purpose - NOT secure practice to hardcode)
+var token = "access_token=de2be790b564a799155c96e311884854e4e65be9"
+//////////////////////////////////////////////////////////////////////////////
 
 
-
-var project = "caleydo/caleydo"
 // var project = "mbostock/d3"
 
-var baseURL = "https://api.github.com/repos/"+project //caleydo/caleydo"
-
-/// REMEMBER TO BLANK THIS BEFORE SUBMISSION! //////////////////////////////////////////////////////
-var token = "access_token=de2be790b564a799155c96e311884854e4e65be9"
-
+var baseUrl = function(project){
+  return "https://api.github.com/repos/"+project
+}
 // forms url for retrieving branch commits
 var getBranchUrl = function(baseUrl, branchName){
-  // e.g., https://api.github.com/repos/mbostock/d3/commits?per_page=100&sha=adopt
   return baseUrl+"/commits?"+token+"&per_page=50&sha="+branchName
 }
 
@@ -88,40 +83,113 @@ var getRecentCommitUrl = function(baseUrl){
   return baseUrl+"/commits?"+token+"&per_page=100"
 }
 
+var getSingleCommitUrl = function(baseUrl, sha){
+  return baseUrl+"/commits/"+sha+"&"+token
+}
 
-// branches to explore in caleydo
+var project = "caleydo/caleydo"
+// branches to explore in caleydo (ones with at least two branches interacting)
 var branches = [
-// "entourage",
 "develop_genlineup",
 "scatterplot",
-// "xdata"
 ]
 
 
-//generate urls to explore
-var myurls = []
+var somedata2 = null;
+//generates urls to explore
+var getUrlSet = function( project, branches ){
+  // repos {project="", branches=[]}
+  if (branches.length == 0) {
+    // get *all* the branches?
+    return [ getRecentCommitUrl(baseUrl(project))]
+  } else {
+    var myurls = []
+    d3.map(branches).forEach(function(k,branch){
+     myurls.push(getBranchUrl(baseUrl(project),branch));
+    });
+    return myurls
+  }
+}
+
+var getUrlSetFromDict = function (reposDict){
+  return getUrlSet(reposDict.project, reposDict.branches)
+}
 
 
-d3.map(branches).forEach(function(k,branch){
-  myurls.push(getBranchUrl(baseURL,branch));
-});
+// I could automatically list all the branches if needed, BUT if it is to be 
+// selected, we need to manually list them.
+repos = {
+  repo_d3: {
+    project:"mbostock/d3", 
+    branches:[
+      "adopt",
+      "axis-scale",
+      "bower-metadata",
+      "clip-polygon",
+      "clip-polygon-semantics",
+      "environment",
+      "fix-antimeridian",
+      "fix-ie9-string-coercion",
+      "fix-resampling-error",
+      "geo-path-length",
+      "get-or-remove-tween",
+      "gh-pages",
+      "line-copy",
+      "master",
+      "time-bst",
+      "zoom-translate-extent",]},
+repo_shiny: {
+    project:"rstudio/shiny", 
+    branches:[
+      "bugfix/ie8-compatibility",
+      "feature/alerts",
+      "feature/bootstrap-layout",
+      "feature/debug-hooks",
+      "feature/example-display-mode",
+      "feature/navbar-input-binding",
+      "feature/shiny.browser",
+      "gh-pages",
+      "httpuv",
+      "master",
+      "reactlog",]},
+  repo_jquery: {
+    project:"jquery/jquery", 
+    branches:[
+      "1.8-stable",
+      "1.9-stable",
+      "1.x-master",
+      "bug_14683",
+      "commitplease",
+      "delegation",
+      "master",]},
+  repo_bootstrap: {
+    project:"twbs/bootstrap", 
+    branches:[
+      "customizer-compat",
+      "docs_zeroclipboard",
+      "document_popover_focus",
+      "fancy-sauce-err-reporting",
+      "fix-8869",
+      "gh-pages",
+      "jscs",
+      "master",
+      "mo-classes-less-problems",
+      "rtl_via_css_flip",
+      "sauce-screenshots",
+      "sr-only-focusable",]}
+}
 
 
-
-
-
-
-
+// // 
+// https://api.github.com/repos/rstudio/shiny/branches?access_token=de2be790b564a799155c96e311884854e4e65be9&per_page=100
 
 ////////////////////////////////////////////////////////////////
-// var xfunc = function() {
+// Loads data and graphs them.
+var mainGraph = function(myurls){
   dataFetcher(myurls, function(datamap){
-    // somedata = datamap
-    console.log(datamap);
     var branches = datamap.keys(); // classes are urls for branches
 
-
-    var branchToCat = function(branch){
+    var branchToCategories = function(branch){
       return branches.indexOf(branch)
     }
 
@@ -131,186 +199,266 @@ d3.map(branches).forEach(function(k,branch){
     }
     // sort the nodes
     var nodeCompare = function(a, b){
-      if (getCommitDate(a) > getCommitDate(b)) return -1
-      if (getCommitDate(a) < getCommitDate(b)) return 1
+      if (getCommitDate(a) > getCommitDate(b)) return 1
+      if (getCommitDate(a) < getCommitDate(b)) return -1
       return 0
     }
 
-
+    // prevent duplicates:
+    var node_shas = []
     datamap.forEach(function(key, value){
-      // console.log(key)
-      // console.log(value)
       var myCommits = value
       var branchName = key
 
       myCommits.sort(nodeCompare)
 
-      // myCommits = myCommits.splice(myCommits.length/2,myCommits.length-myCommits.length/2)
       d3.map(myCommits).forEach(function (i, myCommit){
+
+          if (node_shas.indexOf(myCommit.sha) < 0) { // means it's a new entry
+
             myCommit.branchName = branchName
-            myCommit.cat = branchToCat(branchName)
+            myCommit.cat = branchToCategories(branchName)
             myCommit.date = getCommitDate(myCommit)
+            myCommit.dateString = myCommit.commit.committer.date
+            myCommit.user = myCommit.author.id
             alldates.push(myCommit.date) // todo: use set
-      graph.nodes.push(myCommit)
+
+            
+              graph.nodes.push(myCommit)
+              node_shas.push(myCommit.sha)
+            }
+
       })
     })
 
+
+
+
+
+    // generate index number in chronological order
     graph.nodes.sort(nodeCompare);
-    d3.map(graph.nodes).forEach(function(key, value){
-      value.idx = key
+    d3.map(graph.nodes).forEach(function(key, node){
+      node.idx = key
     })
 
     // generate links
-    graph.nodes.forEach(function(target_node, i){
+    graph.nodes.forEach(function(child_node, i){
 
-      d3.map(target_node.parents).forEach(function(i, parentCommit){
+      d3.map(child_node.parents).forEach(function(i, parentCommit){
         // get source node
 
-        var source_node = graph.nodes.filter(function(commit_node){
+        var parent_node = graph.nodes.filter(function(commit_node){
           return commit_node.sha == parentCommit.sha
         })[0]
 
-        if (source_node) {
-          graph.links.push({"source":source_node, "target": target_node})
+        if (parent_node) {
+          graph.links.push({"target":child_node, "source":  parent_node })
         }
+
       })
     })
 
 
+    force_layout()
+    link = svg.selectAll("path")
+              .data(graph.links)
+              .enter().append("path")
+              .attr("d",lineData)
+              .attr("class", ".link")
+              .attr("stroke","black")
+              .attr("stroke-width", "1px")
+              .attr("shape-rendering", "auto")
+              .attr("fill", "none")
+              .attr("marker-end","url(#end)");
 
-      link = svg.selectAll(".link")
-                    .data(graph.links)
-                    .enter()
-                    .append("line")
-                    .attr("class","link")
-                    .attr("marker-end","url(#end)")
+    // generate svg elements for nodes
+    // text based on: http://stackoverflow.com/questions/19297808/how-to-display-name-of-node-when-mouse-over-on-node-in-collapsible-tree-graph
 
-
-      // generate svg elements for nodes
-      node = svg.append("svg:g").selectAll(".node")
-                    .data(graph.nodes)
-                    .enter()
-                    .append("g")
-                    .attr("class","node")
-                    .on("mouseover",function(d){
-                      console.log("d"+JSON.stringify(d.branchName))
-                      d3.select(this).data([d.branchName])
-                      .enter().append("text")
-                      .attr("test-anchor", "middle").attr("dy", "3em")
-                      .text(d.branchName)
-                    })
-                    .on("mouseout", function(d){
-                      console.log("d"+JSON.stringify(d.branchName))
-                    });
-
-
-   path = svg.append("svg:g").selectAll("path")
-             .data(graph.links)
-             .enter().append("svg:path")
-             .attr("class", function(d) {
-              somedata = d
-              return "link " + d.type; })
-             .attr("class", "link")
-             .attr("marker-end", "url(#end)");
+    node = svg.append("svg:g").selectAll(".node")
+                  .data(graph.nodes)
+                  .enter()
+                  .append("g")
+                  .attr("class","node")
+                  .on("mouseover", function(d){
+                    var g = d3.select(this);
+                    var info = g.append('text')
+                    .classed("info", true)
+                    .attr('x',10).attr('y', -10)
+                    .text("u:"+d.committer.login+" d:"+d.dateString);
+                  })
+                  .on("mouseout", function(){
+                    d3.select(this).select('text.info').remove();
+                  })
+                  
 
 
+    path = svg.append("svg:g").selectAll("path")
+              .data(graph.links)
+              .enter().append("svg:path")
+              .attr("class", function(d) {
+               somedata = d
+               return "link " + d.type; })
+              .attr("class", "link")
+              .attr("marker-end", "url(#end)");
+
+    // yaxis = d3.svg.axis().scale(x_scale)
 
       // append a graphical element for nodes
-      node.append("circle")
-          .attr("r", 5)
+    node.append("circle")
+        .attr("r", 5)
 
-    force_layout() // necessary.
-
-    // graph.nodes.forEach(function(target_node,i){
-    //   d3.map()
-
-    category_color()
-    // force_layout() 
-    // line_cat_layout()
-
-    // force_layout() 
-    // line_cat_layout()
-    // line_cat_layout_time()
-    line_cat_layout_idx()
   });
-// };
-
+}
 
 ////////////////////////////////////////////////////////////////////////////
 
-// var inArray = function(myArray, x){
-//   return (myArray.indexOf(x) >= 0)
-// }
 
-// // var project = "caleydo/caleydo"
-// var project = "mbostock/d3"
-
-// var baseURL = "https://api.github.com/repos/"+project //caleydo/caleydo"
-
-// var d3JsonWrapper = function(url, callbackfunction){
-
-//   d3.json( url, callbackfunction );
-// }
-
-// // https://github.com/mbostock/d3
-// // retrieve all branch information first
-// d3JsonWrapper( getListBranchUrl(baseURL), function(branchdata){
-//   // then retrieve recent commits
-//   d3JsonWrapper( getRecentCommitUrl(baseURL), function(commitdata){
-//     somedata = commitdata
-//     // find all relevant branches for the recent commits
-//     var commits_sha = commitdata.map(function(x){
-//       return x.sha;
-//     });
-
-//     console.log(commits_sha)
-
-//     var notInMain = []
+// var myurls = getUrlSet(project, branches)
+// mainGraph(myurls)
 
 
-//     // collect parent nodes
-//     // var commits_sha_parents = []
-//     d3.map(commitdata).forEach(function(k,v){
+// var repos = repos.repo_caleydo
+// var repos = repos.repo_bootstrap
+// var repos = 
 
-//       d3.map(v.parents).forEach(function(k,parent){
-//         // if (inArray(commits_sha, parent.sha)) {
-//         //   console.log("found one"+parent.sha)
-//         // }
-//         commits_sha.push(parent.sha)
-//       });
-//     });
+
+// mainGraph(getUrlSetFromDict(repos.repo_d3))
+// mainGraph(getUrlSetFromDict(repos.repo_bootstrap))
+// mainGraph(getUrlSetFromDict(repos.repo_jquery))
+// mainGraph(getUrlSetFromDict(repos.repo_neovim))
+mainGraph(getUrlSetFromDict(repos.repo_shiny))
+
+// mainGraph(getUrlSetFromDict(repos.repo_caleydo))
 
 
 
-//     var relevant_branch = branchdata.filter(function(branch){
-//           console.log(branch);
-//           // return true;
-//          return commits_sha.indexOf(branch.commit.sha) >= 0;
-//     });
+////////////////////////////////////////////////////////////
+// layouts
 
-//     somedata = relevant_branch
-//     console.log("r"+JSON.stringify(relevant_branch))
+// Generate the force layout
+var force = d3.layout.force()
+    .size([width, height])
+    .charge(-50)
+    .linkDistance(10)
+    .on("tick", tick)
+    .on("start", function(d) {})
+    .on("end", function(d) {})
 
-//     // console.log(commits_sha)
-//     // console.log(commits_sha_parents)
-//   });
-// });
+function tick(d) {
 
+  graph_update(0);
+}
 
+function random_layout() {
+  
+  force.stop();
 
+  graph.nodes.forEach(function(d, i) {
+    d.x = width/4 + 2*width*Math.random()/4;
+    d.y = height/4 + 2*height*Math.random()/4;
+  })
+  setLineInterpolation("linear")
+  graph_update(500);
+}
 
+function force_layout() {
+  setLineInterpolation("linear")
+ force.nodes(graph.nodes)
+      .links(graph.links)
+      .start();
 
+}
 
+function line_layout() {
+  setLineInterpolation("linear");
+  force.stop();
 
+  graph.nodes.forEach(function(d, i) {
+    d.y = height/2;
+  })
 
+  graph_update(500);
+}
+
+function line_cat_layout() {
+  setLineInterpolation("step-before");
+  force.stop();
+
+  graph.nodes.forEach(function(d, i) {
+    d.y = height/2 + d.cat*20;
+  })
+
+  graph_update(500);
+}
+
+function radial_layout() {
+  setLineInterpolation("linear")
+  force.stop();
+
+  var r = height/2;
+
+  var arc = d3.svg.arc()
+          .outerRadius(r);
+
+  var pie = d3.layout.pie()
+  .sort(function(a, b) { return a.cat - b.cat;})
+          .value(function(d, i) { return 1; }); // equal share for each point
+
+  graph.nodes = pie(graph.nodes).map(function(d, i) {
+    d.innerRadius = 0;
+    d.outerRadius = r;
+    d.data.y = arc.centroid(d)[0]+height/2;
+    d.data.x = arc.centroid(d)[1]+width/2;
+    d.data.endAngle = d.endAngle; 
+    d.data.startAngle = d.startAngle; 
+    return d.data;
+  })
+setLineInterpolation("linear")
+  graph_update(500);
+}
+////////////////////////////////////////////////////////////
+
+function category_color() {
+  d3.selectAll("circle").transition().duration(500).style("fill", function(d) { return fill(d.cat); });
+}
+
+function category_size() {
+  d3.selectAll("circle").transition().duration(500).attr("r", function(d) { return Math.sqrt((d.cat+1)*10); });
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+// Radio button callbacks
+// layouts
+d3.select("input[value=\"force\"]").on("click", force_layout);
+d3.select("input[value=\"random\"]").on("click", random_layout);
+d3.select("input[value=\"line\"]").on("click", line_layout);
+d3.select("input[value=\"radial\"]").on("click", radial_layout);
 d3.select("input[value=\"line_idx\"]").on("click", line_cat_layout_idx);
 d3.select("input[value=\"line_time\"]").on("click", line_cat_layout_time);
 
+// colors
+d3.select("input[value=\"nocolor\"]").on("click", function() {
+  d3.selectAll("circle").transition().duration(500).style("fill", "#66CC66");
+})
+d3.select("input[value=\"color_branch\"]").on("click", category_color);
+d3.select("input[value=\"color_auth\"]").on("click", author_color);
+
+// sizes
+d3.select("input[value=\"nosize\"]").on("click", function() {
+  d3.selectAll("circle").transition().duration(500).attr("r", 5);
+})
+d3.select("input[value=\"size_cat\"]").on("click", category_size);
 
 
 
+d3.select("input[value=\"repo_shiny\"]").on("click", function(){mainGraph(getUrlSetFromDict(repos.repo_shiny))});
+d3.select("input[value=\"repo_d3\"]").on("click", function(){mainGraph(getUrlSetFromDict(repos.repo_d3))});
+d3.select("input[value=\"repo_bootstrap\"]").on("click", function(){mainGraph(getUrlSetFromDict(repos.repo_bootstrap))});
+d3.select("input[value=\"repo_jquery\"]").on("click", function(){mainGraph(getUrlSetFromDict(repos.repo_jquery))});
+d3.select("input[value=\"repo_neovim\"]").on("click", function(){mainGraph(getUrlSetFromDict(repos.repo_neovim))});
 
 
+////////////////////////////////////////////////////////////////////////////////////
 
 </script>
 </body>
