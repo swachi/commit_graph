@@ -1,10 +1,12 @@
-var padding = 20;
- var width = 1200;
-  var height = 700;
+  var padding = 20;
+  var width = 1200;
+  var height = 500;
 
-  var svg = d3.select("body").append("svg")
-              .attr("width", width)
-              .attr("height", height);
+var svg = null
+
+svg = d3.select("body").append("svg")
+              .attr("width", width+700)
+              .attr("height", height+1000);
   
 
 svg.append("svg:defs").selectAll("marker")
@@ -96,7 +98,7 @@ function line_cat_layout() {
 
     d.x = d.idx*5;
   })
-
+setLineInterpolation("step-before")
   graph_update(500);
 }
 
@@ -111,7 +113,7 @@ function line_cat_layout_idx() {
 
     d.x = x_scale (d.idx);
   })
-
+setLineInterpolation("step-before")
   graph_update(500);
 }
 
@@ -126,7 +128,7 @@ function line_cat_layout_time() {
 
     d.x = x_scale(d.date);
   })
-
+setLineInterpolation("step-before")
   graph_update(500);
 }
 
@@ -150,19 +152,26 @@ function getFieldList(someArray, fieldname){
 }
 
 
+var line = null
+
+
+function setLineInterpolation(interpolation){
+line = d3.svg.line().x(function(point){return point.lx;})
+                            .y(function(point){return point.ly;})
+                            .interpolate(interpolation);
+}
+setLineInterpolation("linear")
+
 
  var findNodeUsingSha = function(sha){
       return graph.nodes.filter(function(commit_node){
           return commit_node.sha == sha
         })[0]
     }
-
-var line = null
+// }
 
 // todo: choose between two
-line = d3.svg.line().x(function(point){return point.lx;})
-                            .y(function(point){return point.ly;})
-                            .interpolate("step-before");
+
 
 // line = d3.svg.line().x(function(point){return point.lx;})
 //                             .y(function(point){return point.ly;})
@@ -181,7 +190,7 @@ line = d3.svg.line().x(function(point){return point.lx;})
 
     }
 
-
+///////////////////////////////////////////////////////////
 function graph_update(delay) {
   path.transition().duration(delay)
       .attr("x1", function(d) { return d.target.x; })
@@ -200,7 +209,7 @@ function graph_update(delay) {
         return "translate("+d.x+","+d.y+")"; 
       });
 }
-
+///////////////////////////////////////////////////////////
 
 
 

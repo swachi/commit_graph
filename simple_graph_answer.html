@@ -31,7 +31,6 @@ Layout:
   <label><input type="radio" name="layout" value="random" > Random</label>
   <label><input type="radio" name="layout" value="radial"> Radial</label>  
   <label><input type="radio" name="layout" value="line"> Line</label>
-  <label><input type="radio" name="layout" value="line_cat"> Line by Category</label>
   <label><input type="radio" name="layout" value="line_idx"> index</label>
   <label><input type="radio" name="layout" value="line_time"> time</label>
 </form>
@@ -48,8 +47,11 @@ Size:
 </form>
 <form>
 Repositories:
-  <label><input type="radio" name="repo" value="caleydo" checked> Caleydo</label>
-  <label><input type="radio" name="repo" value="caleydo" checked> Caleydo</label>
+  <label><input type="radio" name="repo" value="repo_shiny" checked> shiny</label>
+  <label><input type="radio" name="repo" value="repo_neovim" > neovim</label>
+<label><input type="radio" name="repo" value="repo_bootstrap" > bootstrap</label>
+<label><input type="radio" name="repo" value="repo_jquery" > jquery</label>
+<label><input type="radio" name="repo" value="repo_d3" > d3</label>
 
 <script src="/js2/d3setup.js"></script>
 
@@ -120,10 +122,10 @@ repos = {
     project:"neovim/neovim",
     branches:[
       "gh-pages",
-"libuv-io",
-"libuv-io-saved",
-"master",
-"top-level-loop",
+      "libuv-io",
+      "libuv-io-saved",
+      "master",
+      "top-level-loop",
     ]
   },
   repo_d3: {
@@ -276,22 +278,37 @@ var mainGraph = function(myurls){
               .attr("marker-end","url(#end)");
 
     // generate svg elements for nodes
+    // text based on: http://stackoverflow.com/questions/19297808/how-to-display-name-of-node-when-mouse-over-on-node-in-collapsible-tree-graph
+
     node = svg.append("svg:g").selectAll(".node")
                   .data(graph.nodes)
                   .enter()
                   .append("g")
                   .attr("class","node")
-                  .on("mouseover",function(d){
-                    console.log("d"+JSON.stringify(d.dateString))
-                    d3.select(this).data([d.branchName])
-                    .enter().append("text")
-                    .attr("test-anchor", "middle").attr("dy", "3em")
-                    .text(d.branchName)
-
+                  .on("mouseover", function(d){
+                    var g = d3.select(this);
+                    var info = g.append('text')
+                    .classed("info", true)
+                    .attr('x',10).attr('y', -10)
+                    .text("u:"+d.committer.login+" d:"+d.dateString);
                   })
-                  .on("mouseout", function(d){
-                    // console.log("d"+JSON.stringify(d.branchName))
-                  });
+                  .on("mouseout", function(){
+                    d3.select(this).select('text.info').remove();
+                  })
+                  // .append("svg:title")
+                  // .on()
+                  // .text(function(d){return d.committer.user+"\n"+d.sha;})
+                  // .on("mouseover",function(d){
+                  //   console.log("d"+JSON.stringify(d.dateString))
+                  //   d3.select(this).data([d.branchName])
+                  //   .enter().append("text")
+                  //   .attr("test-anchor", "middle").attr("dy", "3em")
+                  //   .text(d.branchName)
+
+                  // })
+                  // .on("mouseout", function(d){
+                  //   // console.log("d"+JSON.stringify(d.branchName))
+                  // });
 
 
     path = svg.append("svg:g").selectAll("path")
@@ -325,11 +342,11 @@ var mainGraph = function(myurls){
 
 
 // mainGraph(getUrlSetFromDict(repos.repo_caleydo))
-// mainGraph(getUrlSetFromDict(repos.repo_d3))
+mainGraph(getUrlSetFromDict(repos.repo_d3))
 // mainGraph(getUrlSetFromDict(repos.repo_bootstrap))
 // mainGraph(getUrlSetFromDict(repos.repo_jquery))
 // mainGraph(getUrlSetFromDict(repos.repo_neovim))
-mainGraph(getUrlSetFromDict(repos.repo_shiny))
+// mainGraph(getUrlSetFromDict(repos.repo_shiny))
 
 // mainGraph(getUrlSetFromDict(repos.repo_caleydo))
 
@@ -360,19 +377,20 @@ function random_layout() {
     d.x = width/4 + 2*width*Math.random()/4;
     d.y = height/4 + 2*height*Math.random()/4;
   })
-  
+  setLineInterpolation("linear")
   graph_update(500);
 }
 
 function force_layout() {
-
+  setLineInterpolation("linear")
  force.nodes(graph.nodes)
       .links(graph.links)
       .start();
+
 }
 
 function line_layout() {
-
+  setLineInterpolation("linear");
   force.stop();
 
   graph.nodes.forEach(function(d, i) {
@@ -383,7 +401,7 @@ function line_layout() {
 }
 
 function line_cat_layout() {
-
+  setLineInterpolation("step-before");
   force.stop();
 
   graph.nodes.forEach(function(d, i) {
@@ -394,7 +412,7 @@ function line_cat_layout() {
 }
 
 function radial_layout() {
-
+  setLineInterpolation("linear")
   force.stop();
 
   var r = height/2;
@@ -415,7 +433,7 @@ function radial_layout() {
     d.data.startAngle = d.startAngle; 
     return d.data;
   })
-
+setLineInterpolation("linear")
   graph_update(500);
 }
 ////////////////////////////////////////////////////////////
@@ -434,7 +452,6 @@ function category_size() {
 d3.select("input[value=\"force\"]").on("click", force_layout);
 d3.select("input[value=\"random\"]").on("click", random_layout);
 d3.select("input[value=\"line\"]").on("click", line_layout);
-d3.select("input[value=\"line_cat\"]").on("click", line_cat_layout);
 d3.select("input[value=\"radial\"]").on("click", radial_layout);
 d3.select("input[value=\"line_idx\"]").on("click", line_cat_layout_idx);
 d3.select("input[value=\"line_time\"]").on("click", line_cat_layout_time);
@@ -451,6 +468,16 @@ d3.select("input[value=\"nosize\"]").on("click", function() {
   d3.selectAll("circle").transition().duration(500).attr("r", 5);
 })
 d3.select("input[value=\"size_cat\"]").on("click", category_size);
+
+
+
+d3.select("input[value=\"repo_shiny\"]").on("click", function(){mainGraph(getUrlSetFromDict(repos.repo_shiny))});
+d3.select("input[value=\"repo_d3\"]").on("click", function(){mainGraph(getUrlSetFromDict(repos.repo_d3))});
+d3.select("input[value=\"repo_bootstrap\"]").on("click", function(){mainGraph(getUrlSetFromDict(repos.repo_bootstrap))});
+d3.select("input[value=\"repo_jquery\"]").on("click", function(){mainGraph(getUrlSetFromDict(repos.repo_jquery))});
+d3.select("input[value=\"repo_neovim\"]").on("click", function(){mainGraph(getUrlSetFromDict(repos.repo_neovim))});
+
+
 ////////////////////////////////////////////////////////////////////////////////////
 
 </script>
