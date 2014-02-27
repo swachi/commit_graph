@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>hw2q4</title>
+<style>
+  .link {
+    stroke: gray;
+    stroke-width: 1.5px;
+  }
+path.link {
+  fill: none;
+  stroke: #666;
+  stroke-width: 1.5px;
+}
+  .node {
+    fill: #66CC66;
+    stroke: #000;
+    stroke-width: 1px;
+  }
+
+  .node:hover {
+    fill: red;
+  }
+
+</style>
+
+<body>
+  <!-- Graph Layout Control -->
+
+  <form>
+  Layout:
+    <label><input type="radio" name="layout" value="force"> Force</label>
+    <label><input type="radio" name="layout" value="random"> Random</label>
+    <label><input type="radio" name="layout" value="radial"> Radial</label>  
+    <label><input type="radio" name="layout" value="line"> Line</label>
+    <label><input type="radio" name="layout" value="line_idx" checked><em> Index</em></label>
+    <label><input type="radio" name="layout" value="line_time"><em> Time</em></label>
+  </form>
+  <form>
+  Color:
+    <label><input type="radio" name="color" value="nocolor"> None</label>
+    <label><input type="radio" name="color" value="color_branch"> Branch</label>
+    <label><input type="radio" name="color" value="color_auth" checked> <em>Author</em></label>
+  </form>
+  <form>
+  Size:
+    <label><input type="radio" name="size" value="nosize" checked> None</label>
+    <label><input type="radio" name="size" value="size_cat" > Category</label>
+    <label><input type="radio" name="size" value="size_loc" > Change_LOC</label>
+  </form>
+
+
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script>
+
+// Controller
+// This is what gets called at the very end.
+var main = function(){
+
+  // Remove comment from one repository that will be loaded
+  // (not best practice, but out the scope of this project)
+
+  mainGraph(repos.repo_shiny.project, getUrlSetFromDict(repos.repo_shiny));
+  // mainGraph(getUrlSetFromDict(repos.repo_d3))
+  // mainGraph(getUrlSetFromDict(repos.repo_bootstrap))
+  // mainGraph(getUrlSetFromDict(repos.repo_jquery))
+
+
+};
+
+
+//////////////////////////////////////////////////////////////////////////////
+// Personal Token (only for grading purpose - NOT secure practice to hardcode)
+var token = "access_token=de2be790b564a799155c96e311884854e4e65be9";
+//////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////////
+// Global Variables
+// Note: global variables are usually a bad idea
+
+// dimension for svg
+var width = 1200;
+var height = 500;
+
+// padding for the viewport scales
+var padding = 20;
+
+
+// Main data model
+var graph = {nodes:[], links:[]};
+
+// Main view
+var svg = null;
+
+// constructs a new ordinal scale of range of ten categorical colors.
+var fill = d3.scale.category10(); 
+
+// Graphical elements (view subelements)
+var link = null;
+var node = null;
+var path = null;
+var line = null;
+
+var x_scale = d3.scale.linear().range([0+padding,width-padding]);
+
+// Used for x-scaling support
+var alldates = [];
+
+/////////////////////////////////////////////////////////////////////
+// SVG setup
+svg = d3.select("body")
+        .append("svg")
+          .attr("width", width+700)
+          .attr("height", height+1000);
+
+// Arrow path element
+svg.append("svg:defs").selectAll("marker")
+    .data(["end"])      // Different link/path types can be defined here
+  .enter().append("svg:marker")    // This section adds in the arrows
+    .attr("id", String)
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 15)
+    .attr("refY", -1.5)
+    .attr("markerWidth", 6)
+    .attr("markerHeight", 6)
+    .attr("orient", "auto")
+  .append("svg:path")
+    .attr("d", "M0,-5L10,0L0,5");
+
+////////////////////////////////////////////////////////////////////////////////////
+// Layout functions
+
+// Generate the force layout
+var force = d3.layout.force()
+              .size([width, height])
+              .charge(-50)
+              .linkDistance(10)
+              .on("tick", tick)
+              .on("start", function(d) {})
+              .on("end", function(d) {});
+
+function force_layout() {
+  setLineInterpolation("linear")
+  force.nodes(graph.nodes)
+       .links(graph.links)
+       .start();
+};
+
+// Animates the force layout
+function tick(d) {
+  graph_update(0);
+};
+
+// Scatters nodes
+function random_layout() {  
+  setLineInterpolation("linear");
+  force.stop();
+  graph.nodes.forEach(function(d, i) {
+    d.x = width/4 + 2*width*Math.random()/4;
+    d.y = height/4 + 2*height*Math.random()/4;
+  });
+  graph_update(500);
+};
+
+// Lines up the nodes
+function line_layout() {
+  setLineInterpolation("linear");
+  force.stop();
+  graph.nodes.forEach(function(d, i) {
+    d.y = height/2;
+  });
+  graph_update(500);
+};
+
+// Puts nodes in a circle
+function radial_layout() {
+  setLineInterpolation("linear");
+  force.stop();
+  var r = height/2;
+  var arc = d3.svg.arc()
+          .outerRadius(r);
+  var pie = d3.layout.pie()
+  .sort(function(a, b) { return a.cat - b.cat;})
+          .value(function(d, i) { return 1; }); // equal share for each point
+  graph.nodes = pie(graph.nodes).map(function(d, i) {
+    d.innerRadius = 0;
+    d.outerRadius = r;
+    d.data.y = arc.centroid(d)[0]+height/2;
+    d.data.x = arc.centroid(d)[1]+width/2;
+    d.data.endAngle = d.endAngle; 
+    d.data.startAngle = d.startAngle; 
+    return d.data;
+  });
+  graph_update(500);
+};
+
+function line_cat_layout_idx() {
+  setLineInterpolation("step-before");
+  force.stop();
+  graph.nodes.forEach(function(d, i) {
+    d.y = height/2 + d.cat*20;
+    x_scale.domain([0,graph.nodes.length]);
+    d.x = x_scale (d.idx);
+  });
+  graph_update(500);
+};
+
+function line_cat_layout_time() {
+  setLineInterpolation("step-before");
+  force.stop();
+  graph.nodes.forEach(function(d, i) {
+    d.y = height/2 + d.cat*20;
+    x_scale.domain([d3.min(alldates),d3.max(alldates)])
+    d.x = x_scale(d.date);
+  });
+  graph_update(500);
+};
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Node size and color
+
+function default_size(){
+  d3.selectAll("circle").transition().duration(500).attr("r", 5);
+}
+function category_size() {
+  d3.selectAll("circle").transition().duration(500).attr("r", function(d) { return Math.sqrt((d.cat+1)*10); });
+};
+
+
+var loc2size = function(loc, minsize){
+  if (loc <= 0){
+    return minsize;
+  }else{
+    return Math.log(loc)+minsize*10;
+  }
+}
+
+
+
+function category_size_loc() {
+  d3.selectAll("circle").transition().duration(500).attr("r", function(d) { 
+    // console.log(d.stats)
+    return loc2size(d.stats.total, 1); });
+};
+
+
+function category_color() {
+  d3.selectAll("circle").transition().duration(500).style("fill", function(d) { return fill(d.cat); });
+};
+
+function author_color() {
+  d3.selectAll("circle").transition().duration(500).style("stroke","none").style("fill", function(d) { return fill(d.user); });
+};
+
+var bar_minsize = 0;
+var bar_base_y = -7;
+
+function no_bar_size(){
+    d3.selectAll(".addloc").transition().duration(500)
+    .attr("height", function(d){ 
+      return 5;
+    })
+    .attr("y", function(d){
+      return bar_base_y;
+    })
+}
+
+function loc_bar_size(){
+    d3.selectAll(".addloc").transition().duration(500)
+    .attr("height", function(d){ 
+      return loc2size(d.stats.additions,bar_minsize);
+    })
+    .attr("y", function(d){
+      return bar_base_y-loc2size(d.stats.additions,bar_minsize);
+    });
+
+    d3.selectAll(".delloc").transition().duration(500)
+    .attr("height", function(d){ 
+      return loc2size(d.stats.deletions,bar_minsize);
+    })
+    .attr("y", function(d){
+      return bar_base_y-loc2size(d.stats.deletions,bar_minsize);
+    });
+}
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+function getFieldList(someArray, fieldname){
+  return someArray.map(function(x){
+    return x[fieldname];
+  });
+};
+
+function setLineInterpolation(interpolation){
+line = d3.svg.line().x(function(point){return point.lx;})
+                            .y(function(point){return point.ly;})
+                            .interpolate(interpolation);
+};
+
+// Path support function
+// LOTS of credits to Piazza post by Brian Feeny for figuring out this mess.
+var lineData = function(d){
+  var points = [
+    {lx: (findNodeUsingSha(d.source.sha)).x, ly: (findNodeUsingSha(d.source.sha)).y},
+    {lx: (findNodeUsingSha(d.target.sha)).x, ly: (findNodeUsingSha(d.target.sha)).y}
+  ];
+  return line(points);
+};
+
+///////////////////////////////////////////////////////////////////////////
+// Updates the attributes of the graphical elements based on latest data
+function graph_update(delay) {
+  path.transition().duration(delay)
+      .attr("x1", function(d) { return d.target.x; })
+      .attr("y1", function(d) { return d.target.y; })
+      .attr("x2", function(d) { return d.source.x; })
+      .attr("y2", function(d) { return d.source.y; });
+
+  link.transition().duration(delay).attr("d",lineData)
+      .attr("x1", function(d) { return d.target.x; })
+      .attr("y1", function(d) { return d.target.y; })
+      .attr("x2", function(d) { return d.source.x; })
+      .attr("y2", function(d) { return d.source.y; });
+
+  node.transition().duration(delay)
+      .attr("transform", function(d) { 
+        return "translate("+d.x+","+d.y+")"; 
+      });
+};
+///////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////////
+// Radio button callbacks (to change graph)
+
+// layouts
+d3.select("input[value=\"force\"]").on("click", force_layout);
+d3.select("input[value=\"random\"]").on("click", random_layout);
+d3.select("input[value=\"line\"]").on("click", line_layout);
+d3.select("input[value=\"radial\"]").on("click", radial_layout);
+d3.select("input[value=\"line_idx\"]").on("click", line_cat_layout_idx);
+d3.select("input[value=\"line_time\"]").on("click", line_cat_layout_time);
+
+// colors
+d3.select("input[value=\"nocolor\"]").on("click", function() {
+  d3.selectAll("circle").transition().duration(500).style("fill", "#66CC66");
+});
+d3.select("input[value=\"color_branch\"]").on("click", category_color);
+d3.select("input[value=\"color_auth\"]").on("click", author_color);
+
+// sizes
+d3.select("input[value=\"nosize\"]").on("click", function() {default_size()});
+d3.select("input[value=\"size_cat\"]").on("click", category_size);
+d3.select("input[value=\"size_loc\"]").on("click", category_size_loc);
+////////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////
+// Graph related aux functions
+
+// Retrieves a node from global variable "graph" using SHA string
+var findNodeUsingSha = function(sha){
+  return graph.nodes.filter(function(commit_node){
+    return commit_node.sha == sha
+  })[0]; // [0] just gets the first hit.
+};
+////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+// GitHub related aux functions
+
+// URL generator to conform to github API
+var baseUrl = function(project){ return "https://api.github.com/repos/"+project };
+// forms url for retrieving branch commits
+var getBranchUrl = function(baseUrl, branchName){ return baseUrl+"/commits?"+token+"&per_page=50&sha="+branchName };
+var getListBranchUrl = function(baseUrl){ return baseUrl+"/branches?"+token };
+var getRecentCommitUrl = function(baseUrl){ return baseUrl+"/commits?"+token+"&per_page=100" };
+var getSingleCommitUrl = function(baseUrl, sha){ return baseUrl+"/commits/"+sha+"?"+token };
+
+// Generates a list of urls to explore
+var getUrlSet = function( project, branches ){
+  // repos {project="", branches=[]}
+  if (branches.length == 0) {
+    // get *all* the branches?
+    return [ getRecentCommitUrl(baseUrl(project))]
+  } else {
+    var myurls = []
+    d3.map(branches).forEach(function(k,branch){
+     myurls.push(getBranchUrl(baseUrl(project),branch));
+    });
+    return myurls
+  }
+}
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////
+// *** repos dictionary ***  (GitHub related aux data)
+// List of projects and branches to be displayed
+// I could automatically list all the branches if needed, BUT if it is to be 
+// selected, we need to manually list them.
+
+// Adapter for getUrlSet for repos dict (below)
+var getUrlSetFromDict = function (reposDict){
+  return getUrlSet(reposDict.project, reposDict.branches)
+}
+
+repos = {
+  repo_d3: {
+    project:"mbostock/d3", 
+    branches:[
+      "adopt",
+      "axis-scale",
+      "bower-metadata",
+      "clip-polygon",
+      "clip-polygon-semantics",
+      "environment",
+      "fix-antimeridian",
+      "fix-ie9-string-coercion",
+      "fix-resampling-error",
+      "geo-path-length",
+      "get-or-remove-tween",
+      "gh-pages",
+      "line-copy",
+      "master",
+      "time-bst",
+      "zoom-translate-extent",]},
+repo_shiny: {
+    project:"rstudio/shiny", 
+    branches:[
+      "bugfix/ie8-compatibility",
+      "feature/alerts",
+      "feature/bootstrap-layout",
+      "feature/debug-hooks",
+      "feature/example-display-mode",
+      "feature/navbar-input-binding",
+      "feature/shiny.browser",
+      "gh-pages",
+      "httpuv",
+      "master",
+      "reactlog",]},
+  repo_jquery: {
+    project:"jquery/jquery", 
+    branches:[
+      "1.8-stable",
+      "1.9-stable",
+      "1.x-master",
+      "bug_14683",
+      "commitplease",
+      "delegation",
+      "master",]},
+  repo_bootstrap: {
+    project:"twbs/bootstrap", 
+    branches:[
+      "customizer-compat",
+      "docs_zeroclipboard",
+      "document_popover_focus",
+      "fancy-sauce-err-reporting",
+      "fix-8869",
+      "gh-pages",
+      "jscs",
+      "master",
+      "mo-classes-less-problems",
+      "rtl_via_css_flip",
+      "sauce-screenshots",
+      "sr-only-focusable",]}
+}
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+// Collects JSON from an array of URLs in bulk. (used to collect data from github)
+// Callback is invoked when everything is retrieved
+// retrieved data is in the form of map: {"url": JSON_object, ...}
+var dataFetcher = function(urls, callbackfunc){
+
+  // this is what gets sent to callback function
+  var answer = d3.map()
+
+  // fill with  "undefined" marker
+  d3.map(urls).forEach(function(i, myurl){
+    answer.set(myurl, "undefined")
+  })
+
+  console.log("dataFetcher: " + answer)
+
+  // determine if the datafetcher collected everything 
+  // (which is an absence of "undefined" marker in the answer map)
+  var isAllCollected = function(someAnswer){
+    return someAnswer.values()
+                     .filter(function(x){return x === "undefined";})
+                     .length == 0
+  }
+
+  d3.map(urls).forEach(function(i, myurl){
+    // console.log(myurl);
+    d3.json(myurl, function(respData){
+      
+      answer.set(myurl,respData)
+      console.log("dataFetcher: got one!")
+
+      if (isAllCollected(answer)) {
+        console.log("dataFetcher: finished!")
+        callbackfunc(answer);
+      }
+    });
+  });
+}
+/////////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////////
+// Loads data and graphs them.
+var getNodes = function(myurls, callbackfunc){
+  dataFetcher(myurls, function(datamap){
+    var branches = datamap.keys(); // classes are urls for branches
+
+    var branchToCategories = function(branch){
+      return branches.indexOf(branch);
+    };
+
+    var getCommitDate = function(c){
+      return Date.parse(c.commit.committer.date);
+    };
+
+    // sorts the nodes
+    var nodeCompare = function(a, b){
+      if (getCommitDate(a) > getCommitDate(b)) return 1;
+      if (getCommitDate(a) < getCommitDate(b)) return -1;
+      return 0;
+    };
+
+    
+    var node_shas = []; // prevents duplicate nodes
+    datamap.forEach(function(key, value){
+      var myCommits = value;
+      var branchName = key;
+
+      myCommits.sort(nodeCompare);
+
+      d3.map(myCommits).forEach(function (i, myCommit){
+
+        if (node_shas.indexOf(myCommit.sha) < 0) { // means it's a new entry
+
+          myCommit.branchName = branchName;
+          myCommit.cat = branchToCategories(branchName);
+          myCommit.date = getCommitDate(myCommit);
+          myCommit.dateString = myCommit.commit.committer.date;
+          myCommit.user = myCommit.author.id;
+          alldates.push(myCommit.date);
+
+          graph.nodes.push(myCommit)
+          node_shas.push(myCommit.sha)
+        };
+
+      });
+    });
+
+
+    // generate index number in chronological order
+    graph.nodes.sort(nodeCompare);
+
+    // limit number of nodes displayed ** safety feature **
+    graph.nodes = graph.nodes.slice(graph.nodes.length/2, graph.nodes.length/4*3)
+
+    d3.map(graph.nodes).forEach(function(key, node){
+      node.idx = key;
+    });
+
+    // generate links
+    graph.nodes.forEach(function(child_node, i){
+
+      d3.map(child_node.parents).forEach(function(i, parentCommit){
+
+        // get source node
+        var parent_node = graph.nodes.filter(function(commit_node){
+          return commit_node.sha == parentCommit.sha
+        })[0];
+
+        if (parent_node) {
+          graph.links.push({"target":child_node, "source":  parent_node })
+        }
+
+      });
+    });
+
+    callbackfunc();
+  });
+}
+
+
+var processNodes = function(){
+  var commit_urls = graph.nodes.map(function(nd){
+    return getSingleCommitUrl(baseUrl(projectName), nd.sha);
+  })
+
+  dataFetcher(commit_urls,function(datamap_singleCommits){
+
+    var map2singleCommit = d3.map()
+    // extract commits into sha-keyed dictionary:
+    datamap_singleCommits.forEach(function(key_url, commit){
+      map2singleCommit.set(commit.sha, commit)
+    });
+
+    // retrieve commit stats stats:{total, additions, deletions}
+    d3.map(graph.nodes).forEach(function(k, node){
+      node.stats = map2singleCommit.get(node.sha).stats
+    });
+
+
+    // necessary call to append x, y attributes to nodes 
+    force_layout();
+
+    link = svg.selectAll("path")
+              .data(graph.links)
+              .enter().append("path")
+              .attr("d",lineData)
+              .attr("class", ".link")
+              .attr("stroke","black")
+              .attr("stroke-width", "1px")
+              .attr("shape-rendering", "auto")
+              .attr("fill", "none")
+              .attr("marker-end","url(#end)");
+
+    // generate svg elements for nodes
+    // text based on: 
+    //http://stackoverflow.com/questions/19297808/how-to-display-name-of-node-when-mouse-over-on-node-in-collapsible-tree-graph
+    node = svg.append("svg:g")
+              .selectAll(".node")
+              .data(graph.nodes)
+              .enter()
+              .append("g")
+                .attr("class","node")
+                .on("mouseover", function(d){
+                  var g = d3.select(this);
+                  var info = g.append('text')
+                  .classed("info", true)
+                  .attr('x',10).attr('y', -10)
+                  .text("u:"+d.committer.login+" d:"+d.dateString);
+                })
+                .on("mouseout", function(){
+                  d3.select(this).select('text.info').remove();
+                });
+                  
+    path = svg.append("svg:g").selectAll("path")
+              .data(graph.links)
+              .enter().append("svg:path")
+              .attr("class", function(d) {
+               return "link " + d.type; })
+              .attr("class", "link")
+              .attr("marker-end", "url(#end)");
+
+    // append a graphical element for nodes
+    node.append("circle")
+        .attr("r");
+
+    // node.append("text").text(function(d){return "abc"});
+
+    var bar_width = 4;
+    node.append("rect")
+        .attr("class", "addloc")
+        .style("fill","blue")
+        .style("stroke", "none")
+        .attr("x", -bar_width)
+        .attr("y", -10)
+        .attr("width",bar_width)
+        .attr("height","0");
+
+    node.append("rect")
+        .attr("class", "delloc")
+        .style("fill","red")
+        .style("stroke", "none")
+        .attr("x", 0)
+        .attr("y", -10)
+        .attr("width",bar_width)
+        .attr("height","0");
+
+    // default settings
+    line_cat_layout_idx();
+    author_color();
+    default_size();
+    loc_bar_size()
+  });
+};
+////////////////////////////////////////////////////////////////////////////////////
+
+var projectName = null;
+var mainGraph = function(project, branchUrls){
+  projectName = project;
+  getNodes(branchUrls, processNodes)
+}
+main();
+
+</script>
+</body>
