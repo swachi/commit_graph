@@ -1,20 +1,21 @@
-# Problem 4
+# Problem 4: Sketch Implementation
+
 ## Explanations of Technical Choices
 
 
 ### Aim
-The sketch originally proposed for "LOC-node" representation, where the user will be presented with the additional information of Line-of-code changes (the addition and deletion of lines) for each of the commits.  The design called for two side-by-side bar graph above each commit nodes, where the user can gain the following information:
+The sketch originally proposed for "LOC-node" representation, where the user will be presented with the additional information of Line-of-code (LOC) changes (the addition and deletion of lines) for each of the commits.  The design called for two side-by-side bar graph above each commit nodes, where the user can gain the following information:
 
-1. How much code did the commit change (total magnitude)?
-2. How much features were added/deleted (difference between the two bar lengths)
+1. How much code did the commit change (combined magnitude of change)?
+2. How much LOC were added/deleted (difference between the two bar lengths)
 
 ### Implementation details:
 
 <img src="img/screenshots/LocNode_implementation.png" width="800" style="display: block; margin-left:auto; margin-right:auto;"/>
 
-In order to obtain the LOC information, additional API calls to individual commits were required.  After the branch/commit information was loaded, the detailed information for each unique commit was retrieved and its "stats" field was extracted and added to the node data.  The caveat here is that the retrieval needs to the server as many times as the number of commits displayed and makes the initial load less responsive.
+In order to obtain the LOC information, additional API calls to individual commits were required.  After the branch/commit information was loaded, the detailed information for individual commit was retrieved and its "stats" field was extracted and added to the node data.  The caveat here is that the retrieval needs to the server as many times as the number of commits displayed and makes the initial load less responsive.
 
-Because of limited space in which the bars can be displayed, the height had to be controlled - I have chosen to use log transformation to limit the height of large changes.
+Because of limited space in which the bars can be displayed, the bar height had to be controlled for higher LOC values - log transformation was used to limit the height of large changes.
 
 The original sketch included collapsing and expanding the serial nodes, but I've found that this is an additional complication which will not give too much information for the effort, and was not considered for implementation.
 
