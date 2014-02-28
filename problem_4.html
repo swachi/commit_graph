@@ -12,8 +12,8 @@ path.link {
   stroke-width: 1.5px;
 }
   .node {
-    fill: #66CC66;
-    stroke: #000;
+    fill: lightgray;
+    stroke: none;
     stroke-width: 1px;
   }
 
@@ -37,9 +37,9 @@ path.link {
   </form>
   <form>
   Color:
-    <label><input type="radio" name="color" value="nocolor"> None</label>
+    <label><input type="radio" name="color" value="nocolor" checked> None</label>
     <label><input type="radio" name="color" value="color_branch"> Branch</label>
-    <label><input type="radio" name="color" value="color_auth" checked> <em>Author</em></label>
+    <label><input type="radio" name="color" value="color_auth" > <em>Author</em></label>
   </form>
   <form>
   Size:
@@ -244,6 +244,9 @@ function category_size_loc() {
     return loc2size(d.stats.total, 1); });
 };
 
+function no_color() {
+  d3.selectAll("circle").transition().duration(500).style("fill", "lightgray");
+}
 
 function category_color() {
   d3.selectAll("circle").transition().duration(500).style("fill", function(d) { return fill(d.cat); });
@@ -349,9 +352,7 @@ d3.select("input[value=\"line_idx\"]").on("click", line_cat_layout_idx);
 d3.select("input[value=\"line_time\"]").on("click", line_cat_layout_time);
 
 // colors
-d3.select("input[value=\"nocolor\"]").on("click", function() {
-  d3.selectAll("circle").transition().duration(500).style("fill", "#66CC66");
-});
+d3.select("input[value=\"nocolor\"]").on("click", no_color);
 d3.select("input[value=\"color_branch\"]").on("click", category_color);
 d3.select("input[value=\"color_auth\"]").on("click", author_color);
 
@@ -554,7 +555,7 @@ var getNodes = function(myurls, callbackfunc){
           myCommit.date = getCommitDate(myCommit);
           myCommit.dateString = myCommit.commit.committer.date;
           myCommit.user = myCommit.author.id;
-          alldates.push(myCommit.date);
+          
 
           graph.nodes.push(myCommit)
           node_shas.push(myCommit.sha)
@@ -572,6 +573,7 @@ var getNodes = function(myurls, callbackfunc){
 
     d3.map(graph.nodes).forEach(function(key, node){
       node.idx = key;
+      alldates.push(node.date);
     });
 
     // generate links
@@ -659,6 +661,7 @@ var processNodes = function(){
 
     // append a graphical element for nodes
     node.append("circle")
+        .style("stroke", "none")
         .attr("r");
 
     // node.append("text").text(function(d){return "abc"});

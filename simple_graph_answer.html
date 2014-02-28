@@ -38,13 +38,13 @@ path.link {
   <form>
   Color:
     <label><input type="radio" name="color" value="nocolor"> None</label>
-    <label><input type="radio" name="color" value="color_branch"> Branch</label>
+    <label><input type="radio" name="color" value="color_branch"> <em>Branch</em></label>
     <label><input type="radio" name="color" value="color_auth" checked> <em>Author</em></label>
   </form>
   <form>
   Size:
     <label><input type="radio" name="size" value="nosize" checked> None</label>
-    <label><input type="radio" name="size" value="size_cat" > Category</label>
+    <label><input type="radio" name="size" value="size_cat" > Branch </label>
   </form>
 
 
@@ -52,18 +52,16 @@ path.link {
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script>
 
-// Controller
-// This is what gets called at the very end.
+// Controller (This is what gets called at the very end)
 var main = function(){
 
-  // Remove comment from one repository that will be loaded
+  // Uncomment ONE repository to load
   // (not best practice, but out of scope for this assignment)
 
   mainGraph(getUrlSetFromDict(repos.repo_shiny));
   // mainGraph(getUrlSetFromDict(repos.repo_d3))
   // mainGraph(getUrlSetFromDict(repos.repo_bootstrap))
   // mainGraph(getUrlSetFromDict(repos.repo_jquery))
-
 
 };
 
@@ -578,7 +576,6 @@ var mainGraph = function(myurls){
 
     // default settings
     line_cat_layout_idx();
-    author_color()
   });
 
 };
