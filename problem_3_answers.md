@@ -7,16 +7,13 @@ _Given your previous design critiques, your experience with the previous graph v
 
 Quite a few network-related tasks could be accomplished using the github network:
 
-_Adjacency_ gives the user the information about the preceding commits prior to modification, as well as what two commits were merged to form the child document.
-
-_Following the path_, which is a series of adjacency tasks, will allow the user to follow the "lineage" of a document through a series of commits.
-
-One can _"revisit"_ a commit to trace where certain changes came from, or find the series of task-specific changes through looking at branches.
-
-For higher-level task, one can observe how the project branches have _evolved over time_ by following the network horizontally (along the time axis).
+* __Adjacency__ gives the user the information about the preceding commits prior to modification, as well as what two commits were merged to form the child document.
+* __Following the path__, which is a series of adjacency tasks, will allow the user to follow the "lineage" of a document through a series of commits.
+* One can __"revisit"__ a commit to trace where certain changes came from, or find the series of task-specific changes through looking at branches.
+* For higher-level task, one can observe how the project branches have __evolved over time__ by following the network horizontally (along the time axis).
 
 
-### 2. Get back to the GitHub network visualization you implemented and test it with the following projects on GitHub: D3, jQuery and Bootstrap. There's a lot more data, but the interaction patterns of users are also very different. What do you notice about the three repositories?
+### 2. What do you notice about the three repositories (D3, jQuery and Bootstrap)?
 
 #### D3 
 <img src="img/screenshots/d3-1.png" width="600" style="display: block; margin-left:auto; margin-right:auto;"/> 
