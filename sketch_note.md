@@ -1,4 +1,4 @@
-__Sketch Note (LOC-Node)__
+# Sketch Note (LOC-Node)
 
 (Also repeated in problem_3_answers.md)
 
