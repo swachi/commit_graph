@@ -1,7 +1,6 @@
 # Problem 1: Understanding GitHub Data
 
 ### Contributors
-_
 
 __1. Who is the audience? (e.g. project manager, contributor, project user, visitor, etc.)__
 
@@ -22,7 +21,7 @@ A spike in the graph will increase the y-axis range, flattening the features of 
 
 
 ### Commits
-_
+
 __1. Who is the audience?__
 
 As with the "Contributors" page, visitors are the main audience here, allowing the exact number of commits during certain time period (binned days by histogram, commits on a particular day on line plot).
@@ -44,7 +43,7 @@ As with the Contributors, a spike in the graph will increase the y-axis range, o
 
 
 ### Code Frequency
-_
+
 __1. Who is the audience?__
 
 Both project manager and visitors will benefit from this graph.  The amount of added/deleted code will show both the magnitude of the change and how much of the existing code has been replaced versus how much code was added.
@@ -62,7 +61,7 @@ As with the Contributors and Commits, a spike in the graph will increase the y-a
 
 
 ### Punch Card
-_
+
 __1. Who is the audience?__
 
 This view is more useful for the project manager and contributor - it shows the working patterns of the team.
@@ -81,7 +80,7 @@ A concentrated spot on the punchcard will have much larger dots than others.  On
 
 
 ### Network graph
-_
+
 
 __1. Who is the audience?__
 
@@ -119,13 +118,13 @@ One solution is to collapse consecutive commits witout another contributor into 
 There will be a need to make the collapsed node to expand in order to allow the user to access the individual commits. User should be able to expand by clicking on the collapsed node (and also allow the user to collapse again).
 
 
-__ 4. What is the role of interaction for this visualization? Would a static graph have been sufficient? __
+__4. What is the role of interaction for this visualization? Would a static graph have been sufficient?__
 
 The role of interaction for this visualization is to allow the user to access the individual commits by clicking on the nodes.  This will allow the user to look at what has been changed in that commit.
 
 Static graph would have been sufficient, with link into static elements of the visualization.  The network visualization will need to be paginated, with the link/buttons to redraw the new segments of the graph.  The user will likely to be less engaged with the data, however.
 
-__ 5. What happens if many new developers suddenly join the project and push commits for the first time? How would you preserve the graph's readability in such a situation? __
+__5. What happens if many new developers suddenly join the project and push commits for the first time? How would you preserve the graph's readability in such a situation?__
 
 If many new developers join and commit, there will be many merges, increasing the height of the graph, possibly overwhelming the rest of the graph.  
 
