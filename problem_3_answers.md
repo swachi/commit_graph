@@ -34,11 +34,11 @@ In **bootstrap**, there are sevral pairs of tightly interwoven branches which co
 
 ### 3. How does this impact your graph?
 
-Branch patterns are very organized in **bootstrap**, so it is not very difficult to follow - the existing visualizaton works well for that purpose.
+Branch patterns are very organized in **bootstrap**, so it is not very difficult to follow - the existing visualizaton works well for this repository.
 
-**Jquery** has very disjointed network, with many singletons.  The "bands" of authors are the most useful pattern to glean informations of individual activities.
+**Jquery** has very disjointed network, with many singletons.  The "bands" of authors using color are the most useful pattern to glean informations of individual activities.
 
-**D3** has many branches that are highly connected to each other and the branched visualization is not very effective.  It may be better to follow the sequential merges rather than the branches to get useful information from it.
+**D3** has many branches that are highly connected to each other and the branched visualization is not very effective to understand what's going on.  It may be better to change the layout to follow a path of a series of merges than branches.
 
 
 
